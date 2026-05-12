@@ -1,5 +1,7 @@
 import { FolderOpen, ChevronRight, CheckCircle2, Upload, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { useEffect } from 'react'
+import { sendGAEvent } from '@next/third-parties/google'
 
 interface DocumentStepProps {
   resume: File | null
@@ -22,6 +24,11 @@ export function DocumentStep({
   onComplete,
   isUploading,
 }: DocumentStepProps) {
+  //  GA4 이벤트 전송 코드 추가
+  useEffect(() => {
+    sendGAEvent('event', 'enter_upload_page', { category: 'funnel' })
+  }, [])
+
   const canComplete = !!resume
   const handleFileChange =
     (setter: (f: File | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
