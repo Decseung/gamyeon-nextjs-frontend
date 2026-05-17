@@ -1,8 +1,7 @@
 import { FolderOpen, ChevronRight, CheckCircle2, Upload, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { useEffect } from 'react'
-import { sendGAEvent } from '@next/third-parties/google'
-
+import { trackFunnel } from '@/shared/lib/utils/analytics'
 interface DocumentStepProps {
   resume: File | null
   portfolio: File | null
@@ -24,9 +23,9 @@ export function DocumentStep({
   onComplete,
   isUploading,
 }: DocumentStepProps) {
-  //  GA4 이벤트 전송 코드 추가
+  // GA4 이벤트 전송 코드 수정 (중복 제거 및 단축키 사용)
   useEffect(() => {
-    sendGAEvent('event', 'enter_upload_page', { category: 'funnel' })
+    trackFunnel('enter_upload_page')
   }, [])
 
   const canComplete = !!resume
