@@ -27,8 +27,6 @@ import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
 import { toast } from 'sonner'
 import { trackEvent } from '@/shared/lib/utils/analytics'
-import { title } from 'process'
-import { resume } from 'react-dom/server'
 
 interface InterviewSetupModalProps {
   session: ReturnType<typeof useInterview>
