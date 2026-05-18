@@ -26,7 +26,7 @@ import {
 import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
 import { toast } from 'sonner'
-import { sendGAEvent } from '@next/third-parties/google'
+import { trackEvent } from '@/shared/lib/utils/analytics'
 
 interface InterviewSetupModalProps {
   session: ReturnType<typeof useInterview>
@@ -158,11 +158,16 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       completeStep(2)
 
       // 질문 생성을 기다리는 시간의 시작점 코드 추가 - GA 이벤트 전송
-      sendGAEvent('event', 'question_gen_start', { category: 'ai_interview' })
+      trackEvent('question_gen_start', { category: 'ai_interview' })
       generateInterviewQuestionAction(session.interviewId).catch((err) => console.error(err))
-    } catch (error: any) {
+    } catch (error) {
+      // 1. 명시적인 : any를 제거합니다. (기본적으로 unknown 타입이 됩니다)
       console.error('문서 업로드 중 오류:', error)
-      toast.error(error.message || '문서 업로드 중 오류 발생')
+
+      // 2. error가 Error 객체의 인스턴스인지 확인하여 안전하게 message를 꺼냅니다.
+      const errorMessage = error instanceof Error ? error.message : '문서 업로드 중 오류 발생'
+
+      toast.error(errorMessage)
     } finally {
       setIsUploading(false)
     }
