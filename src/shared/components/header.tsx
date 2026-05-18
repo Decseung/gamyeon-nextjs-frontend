@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/shared/ui/button'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
-import { Sheet, SheetContent, SheetTrigger } from '@/shared/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/shared/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -158,6 +158,7 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-72">
+            <SheetTitle className="sr-only">모바일 메뉴</SheetTitle>
             <div className="mt-8 flex flex-col gap-6">
               {navLinks.map((link) => (
                 <Link

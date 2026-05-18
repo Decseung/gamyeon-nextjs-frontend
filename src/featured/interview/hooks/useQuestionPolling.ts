@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getInterviewQuestionsAction } from '@/featured/interview/actions/interview.action'
 import { useEffect } from 'react'
+import { sendGAEvent } from '@next/third-parties/google'
 
 export function useQuestionPolling(
   intvId: number | null,
@@ -31,6 +32,9 @@ export function useQuestionPolling(
   })
   useEffect(() => {
     if (query.data && query.data.length > 0) {
+      // 질문 생성 완료 (Complete)- GA 이벤트 전송
+      sendGAEvent('event', 'question_gen_complete', { category: 'ai_interview' })
+
       handlePollingComplete()
     }
   }, [query.data, handlePollingComplete])

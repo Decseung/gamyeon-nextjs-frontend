@@ -4,6 +4,8 @@ import { TooltipProvider } from '@/shared/ui/tooltip'
 import ReactQueryProvider from '@/shared/lib/ReactQueryProvider'
 import { Toaster } from 'sonner'
 import './globals.css'
+import { GoogleAnalytics } from '@next/third-parties/google'
+import ClarityProvider from '@/shared/lib/ClarityProvider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -63,6 +65,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || ''} />
+        <ClarityProvider clarityId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || ''} />
         <ReactQueryProvider>
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </ReactQueryProvider>

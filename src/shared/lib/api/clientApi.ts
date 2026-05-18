@@ -57,7 +57,8 @@ async function attemptRefresh(): Promise<string | null> {
 
 function redirectToSignin() {
   if (typeof window !== 'undefined') {
-    window.location.replace('/signin')
+    useAuthStore.getState().logout()
+    window.location.replace('/api/auth/logout?redirectTo=/signin')
   }
 }
 

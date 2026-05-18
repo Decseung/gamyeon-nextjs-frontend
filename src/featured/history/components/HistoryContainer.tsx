@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Card } from '@/shared/ui/card'
@@ -16,6 +16,7 @@ import {
 import { FailedCard } from '@/featured/history/components/cards/FailedCard'
 import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
+import { sendGAEvent } from '@next/third-parties/google'
 
 // 3. 테스트용 목데이터 (이어하기 테스트 명확화 및 상태값 적용)
 // const MOCK_RECORDS: InterviewReportItem[] = [
@@ -100,7 +101,27 @@ function FlipCard({ record }: FlipCardProps) {
 
   // 상태 감별사 함수로 무슨 카드 보여줄지 결정
   const cardType = getReportCardType(record.intvStatus, record.report?.reportStatus)
-  //  추가할 부분: 보여줄 카드 타입이 없으면(null) 렌더링을 중단하고 아무것도 안 그림!
+
+  // 초기값을 null로 설정하여 과거 상태를 비워둡니다.
+  // 방금 화면에 들어왔습니다. 메모장은 비어있습니다. (prevCardType.current === null)
+  const prevCardType = useRef<string | null>(null)
+
+  useEffect(() => {
+    // 1. 카드가 '분석 중' 상태로 렌더링 되었는데, 이전 상태가 '분석 중'이 아닐 때 (최초 진입 포함) (Start)
+    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard') {
+      sendGAEvent('event', 'report_gen_start', { category: 'ai_report' })
+    }
+
+    // 2. 과거 상태가 '분석 중'이었는데, 지금 '분석 완료'로 상태가 바뀌었을 때 (Complete)
+    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard') {
+      sendGAEvent('event', 'report_gen_complete', { category: 'ai_report' })
+    }
+
+    // 다음 상태 비교를 위해, 현재 상태를 '과거'로 메모지에 적어둠
+    prevCardType.current = cardType
+  }, [cardType])
+
+  //  보여줄 카드 타입이 없으면(null) 렌더링을 중단하고 아무것도 안 그림
   if (!cardType) return null
   const isCompleted = cardType === 'completedCard'
 
@@ -162,9 +183,9 @@ export function HistoryContainer({
   // 테스트가 끝나면 다시 records로
   const pageRecords = records.slice(start, start + itemsPerPage)
 
-  // ❌ 수정 전:
+  // 수정 전:
   if (records.length === 0) {
-    // ✅ 수정 후: 목데이터를 기준으로 빈 화면인지 체크하도록 변경
+    // 수정 후: 목데이터를 기준으로 빈 화면인지 체크하도록 변경
     // if (pageRecords.length === 0) {
     if (search) {
       return (

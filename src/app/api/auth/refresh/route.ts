@@ -1,36 +1,44 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { parseSetCookieExpires } from '@/shared/lib/utils/cookie'
+import type { ApiResponse } from '@/shared/lib/api/types'
 
-/**
- * POST /api/auth/refresh
- * 클라이언트에서 401을 받았을 때 호출되는 토큰 갱신 Route Handler.
- * httpOnly 쿠키는 JS에서 직접 읽을 수 없으므로 서버를 경유해 refresh 처리.
- *
- * TODO: 백엔드 refresh 엔드포인트 확정 후 아래 주석 해제 및 구현
- */
+type TokenData = {
+  accessToken?: string
+  refreshToken?: string
+}
+
+function refreshFailure(status: number, data?: Partial<ApiResponse<TokenData>>) {
+  const response = NextResponse.json(
+    { success: false, code: data?.code, message: data?.message },
+    { status },
+  )
+  response.cookies.delete('accessToken')
+  response.cookies.delete('refreshToken')
+  return response
+}
+
 export async function POST() {
   try {
     const cookieStore = await cookies()
 
     const refreshToken = cookieStore.get('refreshToken')?.value
     if (!refreshToken) {
-      return NextResponse.json({ success: false }, { status: 401 })
+      return refreshFailure(401)
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
+
     const res = await fetch(`${apiUrl}/api/v1/auth/reissue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     })
 
-    const data = await res.json()
+    const data = (await res.json().catch(() => ({}))) as Partial<ApiResponse<TokenData>>
+
     if (!data.success || !data.data?.accessToken) {
-      return NextResponse.json(
-        { success: false, code: data.code, message: data.message },
-        { status: res.status },
-      )
+      return refreshFailure(res.status || 401, data)
     }
 
     const response = NextResponse.json({ success: true, accessToken: data.data.accessToken })
@@ -57,6 +65,6 @@ export async function POST() {
 
     return response
   } catch {
-    return NextResponse.json({ success: false }, { status: 500 })
+    return refreshFailure(500)
   }
 }

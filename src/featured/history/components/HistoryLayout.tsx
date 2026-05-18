@@ -1,40 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getReportListAction } from '@/featured/history/actions/history.action'
-import { useAuthStore } from '@/featured/auth/store'
-import { InterviewReportItem, SortBy } from '@/featured/history/types'
+import { useState } from 'react'
+import { SortBy } from '@/featured/history/types'
 import { useHistoryFilter } from '@/featured/history/hooks/useHistoryFilter'
+import { useReportListQuery } from '@/featured/history/hooks/useReportListQuery'
 import { HistoryFilterBar } from '@/featured/history/components/HistoryFilterBar'
 import { HistoryContainer } from '@/featured/history/components/HistoryContainer'
 import { HistoryPagination } from '@/featured/history/components/HistoryPagination'
 import { useColumnsPerRow } from '@/featured/history/hooks/useColumnsPerRow'
 
 export function HistoryLayout() {
-  const { user } = useAuthStore()
-  const [records, setRecords] = useState<InterviewReportItem[]>([])
+  const { data: records = [] } = useReportListQuery()
   const { search, setSearch, sortBy, setSortBy, filtered } = useHistoryFilter(records)
   const cols = useColumnsPerRow()
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = cols * 2
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage))
   const safePage = Math.min(currentPage, totalPages)
-
-  useEffect(() => {
-    if (!user?.id) return
-    async function fetchData() {
-      try {
-        const response = await getReportListAction()
-        if (response.success) {
-          //  데이터가 null일 때를 대비한 방어막(?? []) 추가
-          setRecords(response.data ?? [])
-        }
-      } catch (error) {
-        console.error('리포트 목록을 불러오는데 실패했습니다.', error)
-      }
-    }
-    fetchData()
-  }, [user?.id])
 
   //  사용자가 검색어를 입력할 때, '검색어 변경' + '1페이지로 이동'을 동시에 해주는 함수
   const handleSearchChange = (newSearch: string) => {

@@ -24,7 +24,6 @@ async function tryRefresh(
   cookieStore: Awaited<ReturnType<typeof cookies>>,
 ): Promise<string | null> {
   const refreshToken = cookieStore.get('refreshToken')?.value
-  console.log(`[tryRefresh] refreshToken 존재: ${!!refreshToken}`)
   if (!refreshToken) return null
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
@@ -36,7 +35,6 @@ async function tryRefresh(
     })
 
     const data = await res.json()
-    console.log(`[tryRefresh] status: ${res.status}, body:`, JSON.stringify(data, null, 2))
     if (!data.success || !data.data?.accessToken) return null
 
     const newAccessToken: string = data.data.accessToken
@@ -88,7 +86,6 @@ async function tryRefresh(
  * 에러 발생 시 throw — 호출 측에서 try/catch 사용.
  */
 
-
 // 현재 프로젝트의 serverApi.ts 코드를 자세히 보면, serverFetch 함수가 결과를 반환할 때 이미 Promise<ApiResponse<T>> 형태로 감싸서 주고 있습니다.
 // 즉, serverApi.get을 호출할 때는 실제 핵심 데이터(Notice[])만 제네릭(<>)으로 넘겨주면, serverApi 내부에서 알아서 ApiResponse 껍데기를 씌워서 반환해 줍니다.
 
@@ -127,9 +124,6 @@ async function serverFetch<T>(
     throw new NetworkError()
   }
 
-  const resText = await res.clone().text()
-  console.log(`[serverApi] ${method} ${url} → ${res.status}\n`, resText)
-
   if (res.status === 401) {
     const newAccessToken = await tryRefresh(cookieStore)
     if (!newAccessToken) {
@@ -139,7 +133,7 @@ async function serverFetch<T>(
       } catch {
         // RSC 컨텍스트에서는 쿠키 삭제 불가 — proxy 루프 방지 불가
       }
-      redirect('/signin')
+      redirect('/api/auth/logout?redirectTo=/signin')
     }
 
     try {
@@ -147,8 +141,6 @@ async function serverFetch<T>(
     } catch {
       throw new NetworkError()
     }
-
-    console.log(`[serverApi] retry after refresh → ${res.status}`)
   }
 
   return await handleResponse<T>(res, config)
@@ -188,4 +180,3 @@ export const serverApi = {
   delete: <T>(endpoint: string, config?: RequestConfig) =>
     serverFetch<T>('DELETE', endpoint, undefined, config),
 }
-
