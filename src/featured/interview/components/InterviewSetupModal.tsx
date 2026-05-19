@@ -234,15 +234,25 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       return
     }
 
-    const result = await createInterviewAction(targetTitle)
-    if (result.success) {
-      if (result.data) {
-        session.setInterviewId(result.data.intvId)
+    if (session.interviewId) {
+      const result = await updateInterviewTitleAction(session.interviewId, targetTitle)
+      if (result.success) {
+        setTitle(targetTitle)
+        completeStep(1)
+      } else {
+        toast.error(result.message || '면접 제목 수정 실패')
       }
-      setTitle(targetTitle)
-      completeStep(1)
     } else {
-      toast.error(result.message || '면접 생성 실패')
+      const result = await createInterviewAction(targetTitle)
+      if (result.success) {
+        if (result.data) {
+          session.setInterviewId(result.data.intvId)
+        }
+        setTitle(targetTitle)
+        completeStep(1)
+      } else {
+        toast.error(result.message || '면접 생성 실패')
+      }
     }
   }
 
