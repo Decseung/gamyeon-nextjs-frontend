@@ -193,7 +193,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   const syncInterviewTitle = async () => {
     if (!session.interviewId) return
 
-    const titleRegex = /^[가-힣]+$/
+    const titleRegex = /^[가-힣a-zA-Z0-9 ]{1,20}$/
     const nextTitle = title.trim()
 
     if (!nextTitle || !titleRegex.test(nextTitle)) return
@@ -222,7 +222,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   }
 
   const handleTitleConfirm = async () => {
-    const titleRegex = /^[가-힣]+$/
+    const titleRegex = /^[가-힣a-zA-Z0-9 ]{1,20}$/
     const targetTitle = title.trim()
 
     if (!targetTitle) {
@@ -230,7 +230,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       return
     }
     if (!titleRegex.test(targetTitle)) {
-      toast.error('제목은 띄어쓰기 없이 한글만 가능합니다.')
+      toast.error('제목은 공백을 포함한 한글, 영어, 숫자 1~20자만 가능합니다.')
       return
     }
 
