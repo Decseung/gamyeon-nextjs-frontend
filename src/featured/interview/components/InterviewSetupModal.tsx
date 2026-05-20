@@ -26,7 +26,7 @@ import {
 import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
 import { toast } from 'sonner'
-import { trackEvent } from '@/shared/lib/utils/analytics'
+import { trackEvent, trackFunnel } from '@/shared/lib/utils/analytics'
 
 interface InterviewSetupModalProps {
   session: ReturnType<typeof useInterview>
@@ -135,6 +135,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
           throw new Error(`${target.type} S3 업로드 실패`)
         }
 
+        trackFunnel('upload_s3_success')
         uploadedFiles.push({
           fileType,
           originalFileName,
@@ -167,6 +168,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       // 2. error가 Error 객체의 인스턴스인지 확인하여 안전하게 message를 꺼냅니다.
       const errorMessage = error instanceof Error ? error.message : '문서 업로드 중 오류 발생'
 
+      trackFunnel('upload_s3_error')
       toast.error(errorMessage)
     } finally {
       setIsUploading(false)
@@ -396,6 +398,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
                     await startInterviewAction(session.interviewId)
                   }
 
+                  trackFunnel('start_interview')
                   session.handleSetupComplete({
                     title: title.trim() || '모의 면접',
                     basePose: cameraHandler.basePose,
