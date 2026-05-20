@@ -7,6 +7,7 @@ type FunnelStep =
   | 'question_gen_complete' // 질문 생성 완료
   | 'report_gen_start' // 리포트 생성 시작
   | 'report_gen_complete' // 리포트 생성 완료
+  | 'loading_tab_leave' // 리포트 발행 로딩 중 탭 이탈
 
   // 2. 파일 업로드 및 면접 시작 플로우 점검
   | 'open_interview_modal' // 모달창 최초 진입 (1단계)
