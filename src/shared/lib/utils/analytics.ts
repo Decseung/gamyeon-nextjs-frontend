@@ -9,14 +9,18 @@ type FunnelStep =
   | 'report_gen_complete' // 리포트 생성 완료
 
   // 2. 파일 업로드 및 면접 시작 플로우 점검
-  | 'enter_upload_page' // 파일 업로드 페이지 진입
+  | 'open_interview_modal' // 모달창 최초 진입 (1단계)
+  | 'complete_title_input' // 면접 제목 입력 후 확인
+  | 'enter_upload_step' // 파일 업로드 단계 진입 (2단계)
   | 'upload_s3_success' // S3 업로드 성공
   | 'upload_s3_error' // S3 업로드 실패
-  | 'mic_permission_granted' // 마이크 권한 허용
-  | 'mic_permission_denied' // 마이크 권한 거부
+  | 'request_cam_permission' // 카메라 권한 요청 시작 (3단계)
   | 'cam_permission_granted' // 카메라 권한 허용
   | 'cam_permission_denied' // 카메라 권한 거부
-  | 'start_interview' // 면접 시작 완료
+  | 'request_mic_permission' // 마이크 권한 요청 시작 (4단계)
+  | 'mic_permission_granted' // 마이크 권한 허용
+  | 'mic_permission_denied' // 마이크 권한 거부
+  | 'start_interview' // 면접 시작 버튼 클릭
 
 type EventParams = Record<string, string | number | boolean>
 

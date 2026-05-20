@@ -78,6 +78,8 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   useEffect(() => {
     if (!session.showSetup) return
 
+    trackFunnel('open_interview_modal')
+
     const handleHistoryBack = () => {
       cleanupSetupDevices()
     }
@@ -162,10 +164,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       trackEvent('question_gen_start', { category: 'ai_interview' })
       generateInterviewQuestionAction(session.interviewId).catch((err) => console.error(err))
     } catch (error) {
-      // 1. 명시적인 : any를 제거합니다. (기본적으로 unknown 타입이 됩니다)
       console.error('문서 업로드 중 오류:', error)
-
-      // 2. error가 Error 객체의 인스턴스인지 확인하여 안전하게 message를 꺼냅니다.
       const errorMessage = error instanceof Error ? error.message : '문서 업로드 중 오류 발생'
 
       trackFunnel('upload_s3_error')
@@ -240,6 +239,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       const result = await updateInterviewTitleAction(session.interviewId, targetTitle)
       if (result.success) {
         setTitle(targetTitle)
+        trackFunnel('complete_title_input')
         completeStep(1)
       } else {
         toast.error(result.message || '면접 제목 수정 실패')
@@ -251,6 +251,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
           session.setInterviewId(result.data.intvId)
         }
         setTitle(targetTitle)
+        trackFunnel('complete_title_input')
         completeStep(1)
       } else {
         toast.error(result.message || '면접 생성 실패')

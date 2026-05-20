@@ -191,6 +191,7 @@ export function useCameraHandler(): UseCameraModalHandlerReturn {
     setAlignProgress(0)
     setFaceDetected(false)
     setCameraStatus('requesting')
+    trackFunnel('request_cam_permission')
 
     try {
       await navigator.mediaDevices.enumerateDevices()

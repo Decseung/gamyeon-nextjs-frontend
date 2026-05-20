@@ -25,7 +25,7 @@ export function DocumentStep({
 }: DocumentStepProps) {
   // GA4 이벤트 전송 코드 수정 (중복 제거 및 단축키 사용)
   useEffect(() => {
-    trackFunnel('enter_upload_page')
+    trackFunnel('enter_upload_step')
   }, [])
 
   const canComplete = !!resume

@@ -10,7 +10,7 @@ interface TitleStepProps {
 
 export function TitleStep({ title, onChange, onConfirm }: TitleStepProps) {
   const trimmedTitle = title.trim()
-  const isValidTitle = /^[가-힣]+$/.test(trimmedTitle)
+  const isValidTitle = /^[가-힣a-zA-Z0-9 ]{1,20}$/.test(trimmedTitle)
 
   return (
     <div className="space-y-6">
