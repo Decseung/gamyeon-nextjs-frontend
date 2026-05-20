@@ -46,6 +46,7 @@ export function useMicPermission(onStartPollingRequest: () => void): UseMicPermi
 
   const requestMic = async () => {
     setMicStatus('requesting')
+    trackFunnel('request_mic_permission')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       micStreamRef.current = stream
