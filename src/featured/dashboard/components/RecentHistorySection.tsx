@@ -82,7 +82,7 @@ export function RecentHistorySection({ records = [] }: RecentHistorySectionProps
                 <Link
                   key={item.intvId}
                   href={`/report/${item.intvId}`}
-                  className="flex flex-1 flex-col justify-center"
+                  className="flex h-18.25 flex-col justify-center"
                 >
                   <div className="hover:bg-muted/40 flex h-full w-full items-center gap-4 px-5 transition-colors">
                     <div
