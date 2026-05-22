@@ -102,9 +102,13 @@ export function RecentHistorySection({ records = [] }: RecentHistorySectionProps
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{item.intvTitle}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {formatDateDot(new Date(item.updatedAt))}
-                      </p>
+                      {isAnalyzing ? (
+                        <p className="text-xs text-amber-500">AI 리포트 분석 중...</p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          {formatDateDot(new Date(item.updatedAt))}
+                        </p>
+                      )}
                     </div>
                     <ChevronRight className="text-muted-foreground h-4 w-4" />
                   </div>
