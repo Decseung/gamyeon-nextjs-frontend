@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/shared/ui/card'
-import { ChevronRight, Inbox } from 'lucide-react'
+import { ChevronRight, Inbox, Loader2 } from 'lucide-react'
 import { InterviewReportItem } from '@/featured/history/types'
 import { formatDateDot } from '@/shared/lib/utils/date'
 import { getScoreConfig } from '@/featured/report/constants'
@@ -76,30 +76,39 @@ export function RecentHistorySection({ records = [] }: RecentHistorySectionProps
           ) : (
             displayRecords.map((item) => {
               const score = item.report?.totalScore
-              const isScoreNull = score === null || score === undefined
+              const reportStatus = item.report?.reportStatus
+              const isAnalyzing = reportStatus === 'IN_PROGRESS'
+              const hasScore = score !== null && score !== undefined
 
               return (
                 <Link
                   key={item.intvId}
                   href={`/report/${item.intvId}`}
-                  className="flex flex-1 flex-col justify-center"
+                  className="flex h-18.25 flex-col justify-center"
                 >
                   <div className="hover:bg-muted/40 flex h-full w-full items-center gap-4 px-5 transition-colors">
                     <div
                       className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl text-sm font-bold ${
-                        isScoreNull
-                          ? 'bg-slate-100 text-slate-500' // 점수가 없을 때 (회색)
-                          : getScoreConfig(score).style // 25점 단위 컬러 및 배경색 적용
+                        hasScore ? getScoreConfig(score).style : 'bg-slate-100 text-slate-500'
                       }`}
                     >
-                      {/* 점수가 null이면 '-', 있으면 점수 표시 */}
-                      {isScoreNull ? '-' : score}
+                      {isAnalyzing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : hasScore ? (
+                        score
+                      ) : (
+                        '-'
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{item.intvTitle}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {formatDateDot(new Date(item.updatedAt))}
-                      </p>
+                      {isAnalyzing ? (
+                        <p className="text-xs text-amber-500">AI 리포트 분석 중...</p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          {formatDateDot(new Date(item.updatedAt))}
+                        </p>
+                      )}
                     </div>
                     <ChevronRight className="text-muted-foreground h-4 w-4" />
                   </div>
