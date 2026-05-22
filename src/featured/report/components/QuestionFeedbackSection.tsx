@@ -2,7 +2,14 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { ChevronDown, MessageCircleCheck, Lightbulb, VideoOff, AlertCircle } from 'lucide-react'
+import {
+  ChevronDown,
+  MessageCircleCheck,
+  Lightbulb,
+  VideoOff,
+  AlertCircle,
+  Clock,
+} from 'lucide-react'
 import { Card } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
 import type { QuestionSummary } from '@/featured/report/types'
@@ -169,6 +176,12 @@ export function QuestionFeedbackSection({ feedbacks }: QuestionFeedbackSectionPr
                             <VideoPlayer url={fb.mediaUrl} />
                           </div>
                         </div>
+                        {fb.mediaUrl && (
+                          <p className="text-muted-foreground/50 mt-2 flex items-center justify-center gap-1 text-[12px]">
+                            <Clock className="h-3 w-3" />
+                            면접 영상은 종료 후 7일간 보관됩니다.
+                          </p>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
