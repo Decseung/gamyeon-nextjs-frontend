@@ -39,6 +39,9 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() =>
     isResume ? new Set([1, 2]) : new Set(),
   )
+  const [lockedSteps, setLockedSteps] = useState<Set<number>>(() =>
+    isResume ? new Set(RESUME_LOCKED_STEPS) : new Set(),
+  )
   const [currentStep, setCurrentStep] = useState(() => (isResume ? 3 : 1))
   const [maxReachedStep, setMaxReachedStep] = useState(() => (isResume ? 3 : 1))
   const [title, setTitle] = useState('')
@@ -159,6 +162,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       }
 
       completeStep(2)
+      setLockedSteps((prev) => new Set([...prev, 2]))
 
       // 질문 생성을 기다리는 시간의 시작점 코드 추가 - GA 이벤트 전송
       trackEvent('question_gen_start', { category: 'ai_interview' })
@@ -208,7 +212,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   }
 
   const navigateToStep = (step: number) => {
-    if (isResume && RESUME_LOCKED_STEPS.has(step)) return
+    if (lockedSteps.has(step)) return
     if (maxReachedStep >= 4 || completedSteps.has(step)) {
       if (step === 1) {
         void syncInterviewTitle()
@@ -361,7 +365,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             doneCount={doneCount}
             onStepClick={navigateToStep}
             freeNavigation={maxReachedStep >= 4}
-            lockedSteps={isResume ? RESUME_LOCKED_STEPS : undefined}
+            lockedSteps={lockedSteps.size > 0 ? lockedSteps : undefined}
           />
           <div className="flex flex-1 flex-col">
             <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
