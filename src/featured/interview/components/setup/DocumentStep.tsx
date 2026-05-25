@@ -107,7 +107,7 @@ export function DocumentStep({
             </>
           ) : (
             <>
-              완료
+              제출
               <ChevronRight className="h-3.5 w-3.5" />
             </>
           )}
