@@ -33,7 +33,8 @@ interface InterviewSetupModalProps {
   isResume?: boolean
 }
 
-const RESUME_LOCKED_STEPS = new Set([1, 2])
+const RESUME_LOCKED_STEPS = [1, 2]
+const STEP2_LOCKED = [2]
 
 export function InterviewSetupModal({ session, isResume = false }: InterviewSetupModalProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() =>
@@ -56,11 +57,11 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   const handlePollingComplete = useCallback(() => {
     setIsPollingActive(false)
   }, [])
-  const {
-    data: questions,
-    isLoading,
-    isFetching,
-  } = useQuestionPolling(session.interviewId, isPollingActive, handlePollingComplete)
+  const { data: questions } = useQuestionPolling(
+    session.interviewId,
+    isPollingActive,
+    handlePollingComplete,
+  )
 
   const isQuestionsReady = questions && Array.isArray(questions) && questions.length > 0
 
@@ -185,14 +186,6 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
     if (dest > maxReachedStep) setMaxReachedStep(dest)
   }
 
-  const resetStep = (step: number) => {
-    setCompletedSteps((prev) => {
-      const next = new Set(prev)
-      next.delete(step)
-      return next
-    })
-  }
-
   const syncInterviewTitle = async () => {
     if (!session.interviewId) return
 
@@ -218,11 +211,6 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       }
       setCurrentStep(step)
     }
-  }
-
-  const handleDocumentChange = (setter: (file: File | null) => void) => (file: File | null) => {
-    setter(file)
-    if (completedSteps.has(2)) resetStep(2)
   }
 
   const handleTitleConfirm = async () => {
@@ -292,9 +280,9 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             resume={resume}
             portfolio={portfolio}
             coverLetter={coverLetter}
-            setResume={handleDocumentChange(setResume)}
-            setPortfolio={handleDocumentChange(setPortfolio)}
-            setCoverLetter={handleDocumentChange(setCoverLetter)}
+            setResume={setResume}
+            setPortfolio={setPortfolio}
+            setCoverLetter={setCoverLetter}
             onComplete={handleDocumentConfirm}
             isUploading={isUploading}
           />
@@ -364,7 +352,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             doneCount={doneCount}
             onStepClick={navigateToStep}
             freeNavigation={maxReachedStep >= 4}
-            lockedSteps={isResume ? RESUME_LOCKED_STEPS : isStep2Locked ? new Set([2]) : undefined}
+            lockedSteps={isResume ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
           />
           <div className="flex flex-1 flex-col">
             <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
