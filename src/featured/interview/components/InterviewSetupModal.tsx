@@ -33,12 +33,14 @@ interface InterviewSetupModalProps {
   isResume?: boolean
 }
 
-const RESUME_LOCKED_STEPS = new Set([1, 2])
+const RESUME_LOCKED_STEPS = [1, 2]
+const STEP2_LOCKED = [2]
 
 export function InterviewSetupModal({ session, isResume = false }: InterviewSetupModalProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() =>
     isResume ? new Set([1, 2]) : new Set(),
   )
+  const [isStep2Locked, setIsStep2Locked] = useState(isResume)
   const [currentStep, setCurrentStep] = useState(() => (isResume ? 3 : 1))
   const [maxReachedStep, setMaxReachedStep] = useState(() => (isResume ? 3 : 1))
   const [title, setTitle] = useState('')
@@ -55,11 +57,11 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   const handlePollingComplete = useCallback(() => {
     setIsPollingActive(false)
   }, [])
-  const {
-    data: questions,
-    isLoading,
-    isFetching,
-  } = useQuestionPolling(session.interviewId, isPollingActive, handlePollingComplete)
+  const { data: questions } = useQuestionPolling(
+    session.interviewId,
+    isPollingActive,
+    handlePollingComplete,
+  )
 
   const isQuestionsReady = questions && Array.isArray(questions) && questions.length > 0
 
@@ -159,6 +161,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       }
 
       completeStep(2)
+      setIsStep2Locked(true)
 
       // 질문 생성을 기다리는 시간의 시작점 코드 추가 - GA 이벤트 전송
       trackEvent('question_gen_start', { category: 'ai_interview' })
@@ -183,14 +186,6 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
     if (dest > maxReachedStep) setMaxReachedStep(dest)
   }
 
-  const resetStep = (step: number) => {
-    setCompletedSteps((prev) => {
-      const next = new Set(prev)
-      next.delete(step)
-      return next
-    })
-  }
-
   const syncInterviewTitle = async () => {
     if (!session.interviewId) return
 
@@ -208,18 +203,14 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   }
 
   const navigateToStep = (step: number) => {
-    if (isResume && RESUME_LOCKED_STEPS.has(step)) return
+    if (step === 2 && isStep2Locked) return
+    if (step === 1 && isResume) return
     if (maxReachedStep >= 4 || completedSteps.has(step)) {
       if (step === 1) {
         void syncInterviewTitle()
       }
       setCurrentStep(step)
     }
-  }
-
-  const handleDocumentChange = (setter: (file: File | null) => void) => (file: File | null) => {
-    setter(file)
-    if (completedSteps.has(2)) resetStep(2)
   }
 
   const handleTitleConfirm = async () => {
@@ -289,9 +280,9 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             resume={resume}
             portfolio={portfolio}
             coverLetter={coverLetter}
-            setResume={handleDocumentChange(setResume)}
-            setPortfolio={handleDocumentChange(setPortfolio)}
-            setCoverLetter={handleDocumentChange(setCoverLetter)}
+            setResume={setResume}
+            setPortfolio={setPortfolio}
+            setCoverLetter={setCoverLetter}
             onComplete={handleDocumentConfirm}
             isUploading={isUploading}
           />
@@ -361,7 +352,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             doneCount={doneCount}
             onStepClick={navigateToStep}
             freeNavigation={maxReachedStep >= 4}
-            lockedSteps={isResume ? RESUME_LOCKED_STEPS : undefined}
+            lockedSteps={isResume ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
           />
           <div className="flex flex-1 flex-col">
             <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
