@@ -17,8 +17,6 @@ import { FailedCard } from '@/featured/history/components/cards/FailedCard'
 import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
 import { trackEvent } from '@/shared/lib/utils/analytics'
-import { sendGAEvent } from '@next/third-parties/google'
-import { tr, track } from 'framer-motion/client'
 
 // 3. 테스트용 목데이터 (이어하기 테스트 명확화 및 상태값 적용)
 // const MOCK_RECORDS: InterviewReportItem[] = [
