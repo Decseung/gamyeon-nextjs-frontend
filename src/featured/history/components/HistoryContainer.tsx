@@ -17,6 +17,7 @@ import { FailedCard } from '@/featured/history/components/cards/FailedCard'
 import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
 import { trackEvent } from '@/shared/lib/utils/analytics'
+import { useRageClick } from '../hooks/useRageClick'
 
 // 3. 테스트용 목데이터 (이어하기 테스트 명확화 및 상태값 적용)
 // const MOCK_RECORDS: InterviewReportItem[] = [
@@ -183,6 +184,36 @@ export function HistoryContainer({
   // 테스트가 끝나면 다시 records로
   const pageRecords = records.slice(start, start + itemsPerPage)
 
+  // 1. 현재 화면에 'AI 리포트 분석 중'인 카드가 한 개라도 존재하는지 실시간 체크
+  const hasAnalysingCard = pageRecords.some(
+    (record) =>
+      getReportCardType(record.intvStatus, record.report?.reportStatus) === 'analysingCard',
+  )
+
+  // 2. 분노 클릭 조건 만족 시 실행할 통합 전송 핸들러
+  const handleRageClickDetected = () => {
+    // 분석 중인 카드가 화면에 있을 때만 이벤트를 발송합니다.
+    if (!hasAnalysingCard) return
+
+    // [GA4 전송] - 명세서에 등록한 'rage_click' 이벤트 발송
+    trackEvent('rage_click', {
+      category: 'user_frustration',
+      label: 'ai_report_waiting',
+      screen_name: 'history_page_global',
+    })
+
+    // [MS Clarity 스마트 연동] - 대시보드 커스텀 필터용 타겟팅 이벤트
+    if (typeof window !== 'undefined' && 'clarity' in window) {
+      const clarityApi = window.clarity as (event: string, name: string) => void
+      clarityApi('event', 'rage_click')
+    }
+
+    console.log('[통합 전송 완료] GA4: rage_click / Clarity: rage_click')
+  }
+
+  //  3. useRageClick 훅 활용
+  const { handleContainerClick } = useRageClick(handleRageClickDetected)
+
   // 수정 전:
   if (records.length === 0) {
     // 수정 후: 목데이터를 기준으로 빈 화면인지 체크하도록 변경
@@ -235,7 +266,10 @@ export function HistoryContainer({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+    <div
+      onClick={handleContainerClick}
+      className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5"
+    >
       {pageRecords.map((record, i) => (
         <motion.div
           key={record.intvId}
