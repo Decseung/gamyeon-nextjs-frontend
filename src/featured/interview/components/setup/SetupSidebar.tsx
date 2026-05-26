@@ -28,7 +28,7 @@ function SidebarStep({ step, status, onClick, freeNavigation, locked }: SidebarS
         'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200',
         status === 'active' && 'bg-primary/10',
         status === 'pending' && !freeNavigation && 'opacity-40',
-        clickable && 'cursor-pointer hover:bg-muted/60',
+        clickable && 'hover:bg-muted/60 cursor-pointer',
       )}
     >
       <div className="flex h-6 w-6 shrink-0 items-center justify-center">
@@ -78,10 +78,16 @@ interface SetupSidebarProps {
   doneCount: number
   onStepClick?: (step: number) => void
   freeNavigation?: boolean
-  lockedSteps?: Set<number>
+  lockedSteps?: number[]
 }
 
-export function SetupSidebar({ statuses, doneCount, onStepClick, freeNavigation, lockedSteps }: SetupSidebarProps) {
+export function SetupSidebar({
+  statuses,
+  doneCount,
+  onStepClick,
+  freeNavigation,
+  lockedSteps,
+}: SetupSidebarProps) {
   return (
     <aside className="border-border/60 bg-muted/30 flex w-64 shrink-0 flex-col border-r">
       <div className="border-border/50 border-b px-5 py-5">
@@ -103,7 +109,7 @@ export function SetupSidebar({ statuses, doneCount, onStepClick, freeNavigation,
             status={statuses[step.id - 1]}
             onClick={onStepClick ? () => onStepClick(step.id) : undefined}
             freeNavigation={freeNavigation}
-            locked={lockedSteps?.has(step.id)}
+            locked={lockedSteps?.includes(step.id)}
           />
         ))}
       </nav>

@@ -4,6 +4,7 @@ import { ALIGN_DURATION_MS } from '@/featured/interview/constants'
 import { useGazeTracker } from '@/featured/interview/hooks/useGazeTracker'
 import { type PermStatus } from '@/featured/interview/types'
 import { validateFacePosition } from '@/featured/interview/utils/setupUtils'
+import { trackFunnel } from '@/shared/lib/utils/analytics'
 
 interface UseCameraModalHandlerReturn {
   landmarker: FaceLandmarker | null
@@ -190,6 +191,7 @@ export function useCameraHandler(): UseCameraModalHandlerReturn {
     setAlignProgress(0)
     setFaceDetected(false)
     setCameraStatus('requesting')
+    trackFunnel('request_cam_permission')
 
     try {
       await navigator.mediaDevices.enumerateDevices()
@@ -203,10 +205,12 @@ export function useCameraHandler(): UseCameraModalHandlerReturn {
       cameraStreamRef.current = stream
       setCameraStream(stream)
       setCameraStatus('granted')
+      trackFunnel('cam_permission_granted')
     } catch {
       if (!isMountedRef.current) return
       resetCameraState()
       setCameraStatus('denied')
+      trackFunnel('cam_permission_denied')
     }
   }
 

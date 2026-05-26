@@ -16,7 +16,9 @@ import {
 import { FailedCard } from '@/featured/history/components/cards/FailedCard'
 import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
+import { trackEvent } from '@/shared/lib/utils/analytics'
 import { sendGAEvent } from '@next/third-parties/google'
+import { tr, track } from 'framer-motion/client'
 
 // 3. 테스트용 목데이터 (이어하기 테스트 명확화 및 상태값 적용)
 // const MOCK_RECORDS: InterviewReportItem[] = [
@@ -107,14 +109,14 @@ function FlipCard({ record }: FlipCardProps) {
   const prevCardType = useRef<string | null>(null)
 
   useEffect(() => {
-    // 1. 카드가 '분석 중' 상태로 렌더링 되었는데, 이전 상태가 '분석 중'이 아닐 때 (최초 진입 포함) (Start)
+    // 1. 리포트 생성 시작 시 (Start)
     if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard') {
-      sendGAEvent('event', 'report_gen_start', { category: 'ai_report' })
+      trackEvent('report_gen_start', { category: 'ai_report' })
     }
 
-    // 2. 과거 상태가 '분석 중'이었는데, 지금 '분석 완료'로 상태가 바뀌었을 때 (Complete)
+    // 2. 리포트 생성 완료 시 (Complete)
     if (prevCardType.current === 'analysingCard' && cardType === 'completedCard') {
-      sendGAEvent('event', 'report_gen_complete', { category: 'ai_report' })
+      trackEvent('report_gen_complete', { category: 'ai_report' })
     }
 
     // 다음 상태 비교를 위해, 현재 상태를 '과거'로 메모지에 적어둠

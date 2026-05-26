@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { type PermStatus } from '@/featured/interview/types'
+import { trackFunnel } from '@/shared/lib/utils/analytics'
 
 export interface UseMicPermissionReturn {
   micStatus: PermStatus
@@ -45,6 +46,7 @@ export function useMicPermission(onStartPollingRequest: () => void): UseMicPermi
 
   const requestMic = async () => {
     setMicStatus('requesting')
+    trackFunnel('request_mic_permission')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       micStreamRef.current = stream
@@ -55,9 +57,11 @@ export function useMicPermission(onStartPollingRequest: () => void): UseMicPermi
       analyser.fftSize = 256
       ctx.createMediaStreamSource(stream).connect(analyser)
       setMicStatus('granted')
+      trackFunnel('mic_permission_granted')
       onStartPollingRequest()
     } catch {
       setMicStatus('denied')
+      trackFunnel('mic_permission_denied')
     }
   }
 

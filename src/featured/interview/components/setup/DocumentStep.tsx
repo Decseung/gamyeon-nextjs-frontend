@@ -1,6 +1,15 @@
 import { FolderOpen, ChevronRight, CheckCircle2, Upload, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/shared/ui/dialog'
+import { useEffect, useState } from 'react'
+import { trackFunnel } from '@/shared/lib/utils/analytics'
 interface DocumentStepProps {
   resume: File | null
   portfolio: File | null
@@ -22,6 +31,13 @@ export function DocumentStep({
   onComplete,
   isUploading,
 }: DocumentStepProps) {
+  // GA4 이벤트 전송 코드 수정 (중복 제거 및 단축키 사용)
+  useEffect(() => {
+    trackFunnel('enter_upload_step')
+  }, [])
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   const canComplete = !!resume
   const handleFileChange =
     (setter: (f: File | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +108,7 @@ export function DocumentStep({
           size="sm"
           disabled={!canComplete || isUploading}
           className="cursor-pointer gap-2"
-          onClick={onComplete}
+          onClick={() => setConfirmOpen(true)}
         >
           {isUploading ? (
             <>
@@ -101,12 +117,43 @@ export function DocumentStep({
             </>
           ) : (
             <>
-              완료
+              제출
               <ChevronRight className="h-3.5 w-3.5" />
             </>
           )}
         </Button>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>문서 제출 확인</DialogTitle>
+            <DialogDescription>
+              제출 후에는 업로드한 문서를 변경할 수 없습니다. 계속하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => setConfirmOpen(false)}
+            >
+              취소
+            </Button>
+            <Button
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => {
+                setConfirmOpen(false)
+                onComplete()
+              }}
+            >
+              제출
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
