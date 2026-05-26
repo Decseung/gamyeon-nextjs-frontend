@@ -41,10 +41,14 @@ export async function POST(
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
+    const redirectUri =
+      provider === 'google'
+        ? process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI
+        : process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI
     const res = await fetch(`${apiUrl}/api/v1/auth/login/${provider}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorizationCode, codeVerifier }),
+      body: JSON.stringify({ authorizationCode, codeVerifier, redirectUri }),
     })
 
     const data = await res.json()
