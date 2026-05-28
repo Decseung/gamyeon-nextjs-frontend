@@ -19,13 +19,14 @@ export function TitleStep({ title, onChange, onConfirm }: TitleStepProps) {
           <FileText className="text-primary h-6 w-6" />
         </div>
         <h3 className="text-lg font-bold">면접 제목 입력</h3>
-        <p className="text-muted-foreground mt-1 text-sm">
-          이번 면접의 제목을 입력해주세요. (띄어쓰기 없이 한글만 가능합니다.)
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">이번 면접의 제목을 입력해주세요.</p>
+        <span className="text-muted-foreground text-xs">
+          (공백을 포함한 한글, 영어, 숫자 1~20자만 입력 가능합니다.)
+        </span>
       </div>
       <div className="flex gap-2">
         <Input
-          placeholder="예: 원티드면접"
+          placeholder="예: 원티드 면접"
           value={title}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && isValidTitle && onConfirm()}
