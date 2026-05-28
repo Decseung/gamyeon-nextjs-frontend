@@ -27,6 +27,11 @@ type EventParams = Record<string, string | number | boolean>
 
 // string 대신 FunnelStep 타입을 적용
 export const trackEvent = (eventName: FunnelStep | string, params?: EventParams) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[GA4-DEV-SKIP] event: ${eventName}`, params || {})
+    return
+  }
+
   sendGAEvent('event', eventName, params || {})
 }
 
