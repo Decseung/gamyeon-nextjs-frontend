@@ -34,7 +34,7 @@ export function useQuestionPolling(
   useEffect(() => {
     if (query.data && query.data.length > 0) {
       // 질문 생성 완료 (Complete)- GA 이벤트 전송 (trackEvent 적용)
-      trackEvent('question_gen_complete', { category: 'ai_interview' })
+      trackEvent('question_gen_complete', { category: 'user_interview' })
 
       handlePollingComplete()
     }

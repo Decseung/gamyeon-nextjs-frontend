@@ -164,7 +164,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       setIsStep2Locked(true)
 
       // 질문 생성을 기다리는 시간의 시작점 코드 추가 - GA 이벤트 전송
-      trackEvent('question_gen_start', { category: 'ai_interview' })
+      trackEvent('question_gen_start', { category: 'user_interview' })
       generateInterviewQuestionAction(session.interviewId).catch((err) => console.error(err))
     } catch (error) {
       console.error('문서 업로드 중 오류:', error)
