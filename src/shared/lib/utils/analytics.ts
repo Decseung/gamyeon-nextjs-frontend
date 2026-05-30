@@ -1,4 +1,11 @@
 import { sendGAEvent } from '@next/third-parties/google'
+import clarity from '@microsoft/clarity'
+
+declare global {
+  interface Window {
+    clarity?: (...args: unknown[]) => void
+  }
+}
 
 // 기획 단계에서 정의한 이벤트 명세
 type FunnelStep =
@@ -32,6 +39,29 @@ type FunnelStep =
 type EventParams = Record<string, string | number | boolean> & {
   question_number?: number
   category?: string
+}
+
+interface TrackEventOptions {
+  clarity?: boolean
+}
+
+const isBrowser = () => typeof window !== 'undefined'
+
+const logAnalyticsEvent = (
+  destination: 'GA4' | 'Clarity',
+  eventName: FunnelStep | string,
+  params?: EventParams,
+) => {
+  if (process.env.NODE_ENV !== 'development') return
+
+  console.info(`[${destination}] event: ${eventName}`, params || {})
+}
+
+export const trackClarityEvent = (eventName: FunnelStep | string) => {
+  if (!isBrowser() || typeof window.clarity !== 'function') return
+
+  clarity.event(eventName)
+  logAnalyticsEvent('Clarity', eventName)
 }
 
 // string 대신 FunnelStep 타입을 적용
