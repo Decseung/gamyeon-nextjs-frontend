@@ -1,15 +1,12 @@
 import { useRef, useEffect, useCallback } from 'react'
 
 interface RageClickOptions {
-  limit?: number;     // 분노 클릭 기준 횟수 (기본값 3)
-  cooldown?: number;  // 초기화 대기 시간 (기본값 2000ms)
+  limit?: number // 분노 클릭 기준 횟수 (기본값 3)
+  windowMs?: number // 몇 ms 안에서 클릭을 묶을지 (기본값 2000ms)
 }
 
-export function useRageClick(
-  onRageClick: () => void, 
-  options: RageClickOptions = {}
-) {
-  const { limit = 3, cooldown = 2000 } = options;
+export function useRageClick(onRageClick: () => void, options: RageClickOptions = {}) {
+  const { limit = 3, windowMs = 2000 } = options
 
   const clickCountRef = useRef(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -37,8 +34,8 @@ export function useRageClick(
 
     timerRef.current = setTimeout(() => {
       clickCountRef.current = 0
-    }, cooldown)
-  }, [onRageClick, limit, cooldown])
+    }, windowMs)
+  }, [onRageClick, limit, windowMs])
 
   // 이제 외부로 굳이 타이머 클리어 함수를 내보내지 않아도 안전합니다!
   return { handleContainerClick }
