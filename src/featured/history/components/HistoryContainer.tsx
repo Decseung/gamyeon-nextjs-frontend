@@ -191,7 +191,7 @@ export function HistoryContainer({
   )
 
   // 2. 분노 클릭 조건 만족 시 실행할 통합 전송 핸들러
-  const handleRageClickDetected = () => {
+  const handleRageClick = () => {
     // 분석 중인 카드가 화면에 있을 때만 이벤트를 발송합니다.
     if (!hasAnalysingCard) return
 
@@ -212,7 +212,7 @@ export function HistoryContainer({
   }
 
   //  3. useRageClick 훅 활용
-  const { handleContainerClick } = useRageClick(handleRageClickDetected)
+  const { handleContainerClick } = useRageClick(handleRageClick)
 
   // 수정 전:
   if (records.length === 0) {
