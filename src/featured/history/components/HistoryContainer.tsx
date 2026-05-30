@@ -203,9 +203,8 @@ export function HistoryContainer({
     })
 
     // [MS Clarity 스마트 연동] - 대시보드 커스텀 필터용 타겟팅 이벤트
-    if (typeof window !== 'undefined' && 'clarity' in window) {
-      const clarityApi = window.clarity as (event: string, name: string) => void
-      clarityApi('event', 'rage_click')
+    if (typeof window !== 'undefined' && typeof window.clarity === 'function') {
+      window.clarity('event', 'rage_click')
     }
 
     console.log('[통합 전송 완료] GA4: rage_click / Clarity: rage_click')
