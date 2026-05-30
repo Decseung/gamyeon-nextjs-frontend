@@ -19,72 +19,6 @@ import { AnalysingCard } from './cards/AnalysingCard'
 import { trackEvent } from '@/shared/lib/utils/analytics'
 import { useRageClick } from '../hooks/useRageClick'
 
-// 3. 테스트용 목데이터 (이어하기 테스트 명확화 및 상태값 적용)
-// const MOCK_RECORDS: InterviewReportItem[] = [
-//   {
-//     intvId: 1,
-//     intvTitle: '프론트엔드 직무 면접 (분석 완료 테스트)',
-//     intvStatus: 'FINISHED',
-//     durationMs: 3600000,
-//     updatedAt: '2026-03-15T10:00:00Z',
-//     report: {
-//       reportId: 101,
-//       reportStatus: 'SUCCEED',
-//       totalScore: 85,
-//       answeredCount: 5,
-//       strengths: ['React', 'TypeScript'],
-//       weaknesses: ['CS 지식'],
-//     },
-//   },
-//   {
-//     intvId: 2,
-//     intvTitle: '프론트엔드 직무 면접 (분석 중 테스트)',
-//     intvStatus: 'FINISHED',
-//     durationMs: 2400000,
-//     updatedAt: '2026-03-15T11:00:00Z',
-//     report: {
-//       reportId: 102,
-//       reportStatus: 'IN_PROGRESS',
-//       totalScore: null,
-//       answeredCount: 4,
-//       strengths: null,
-//       weaknesses: null,
-//     },
-//   },
-//   {
-//     intvId: 3,
-//     intvTitle: '프론트엔드 직무 면접 (분석 실패 테스트)',
-//     intvStatus: 'FINISHED',
-//     durationMs: 1800000,
-//     updatedAt: '2026-03-15T12:00:00Z',
-//     report: {
-//       reportId: 103,
-//       reportStatus: 'FAILED',
-//       totalScore: null,
-//       answeredCount: 2,
-//       strengths: null,
-//       weaknesses: null,
-//     },
-//   },
-//   {
-//     intvId: 4,
-//     intvTitle: '프론트엔드 직무 면접 (이어하기 UI 테스트)',
-//     intvStatus: 'PAUSED',
-//     durationMs: null,
-//     updatedAt: '2026-03-15T13:00:00Z',
-//     report: null,
-//   },
-//   {
-//     // 테스트: 이 카드가 화면에서 아예 사라지는지 확인합니다
-//     intvId: 5,
-//     intvTitle: 'READY 상태 테스트',
-//     intvStatus: 'READY',
-//     durationMs: null,
-//     updatedAt: '2026-03-15T13:00:00Z',
-//     report: null,
-//   },
-// ]
-
 interface HistoryContainerProps {
   records: InterviewReportItem[]
   search: string
@@ -206,8 +140,6 @@ export function HistoryContainer({
     if (typeof window !== 'undefined' && typeof window.clarity === 'function') {
       window.clarity('event', 'rage_click')
     }
-
-    console.log('[통합 전송 완료] GA4: rage_click / Clarity: rage_click')
   }
 
   //  3. useRageClick 훅 활용
