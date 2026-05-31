@@ -108,16 +108,17 @@ export async function sendGazeStats(questionSetId: number, payload: InterviewBat
   return await serverApi.post(`/api/v1/intvs/${questionSetId}/gaze`, payload)
 }
 
-// MVP2
 // 면접 시작
 export async function startInterview(intvId: number): Promise<ApiResponse<null>> {
   return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/start`)
 }
+
 // 면저 중단
 export async function pauseInterview(intvId: number): Promise<ApiResponse<null>> {
   return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/pause`)
 }
+
 // 면접 재개
-export async function resumeInterview(intvId: number): Promise<ApiResponse<null>> {
+export async function restartInterview(intvId: number): Promise<ApiResponse<null>> {
   return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/resume`)
 }

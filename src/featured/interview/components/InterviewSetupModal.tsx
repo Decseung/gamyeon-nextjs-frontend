@@ -30,19 +30,19 @@ import { trackEvent, trackFunnel } from '@/shared/lib/utils/analytics'
 
 interface InterviewSetupModalProps {
   session: ReturnType<typeof useInterview>
-  isResume?: boolean
+  isRestart?: boolean
 }
 
 const RESUME_LOCKED_STEPS = [1, 2]
 const STEP2_LOCKED = [2]
 
-export function InterviewSetupModal({ session, isResume = false }: InterviewSetupModalProps) {
+export function InterviewSetupModal({ session, isRestart = false }: InterviewSetupModalProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() =>
-    isResume ? new Set([1, 2]) : new Set(),
+    isRestart ? new Set([1, 2]) : new Set(),
   )
-  const [isStep2Locked, setIsStep2Locked] = useState(isResume)
-  const [currentStep, setCurrentStep] = useState(() => (isResume ? 3 : 1))
-  const [maxReachedStep, setMaxReachedStep] = useState(() => (isResume ? 3 : 1))
+  const [isStep2Locked, setIsStep2Locked] = useState(isRestart)
+  const [currentStep, setCurrentStep] = useState(() => (isRestart ? 3 : 1))
+  const [maxReachedStep, setMaxReachedStep] = useState(() => (isRestart ? 3 : 1))
   const [title, setTitle] = useState('')
   const [resume, setResume] = useState<File | null>(null)
   const [portfolio, setPortfolio] = useState<File | null>(null)
@@ -204,7 +204,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
 
   const navigateToStep = (step: number) => {
     if (step === 2 && isStep2Locked) return
-    if (step === 1 && isResume) return
+    if (step === 1 && isRestart) return
     if (maxReachedStep >= 4 || completedSteps.has(step)) {
       if (step === 1) {
         void syncInterviewTitle()
@@ -352,7 +352,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             doneCount={doneCount}
             onStepClick={navigateToStep}
             freeNavigation={maxReachedStep >= 4}
-            lockedSteps={isResume ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
+            lockedSteps={isRestart ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
           />
           <div className="flex flex-1 flex-col">
             <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
@@ -378,7 +378,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
                   !allDone ||
                   !isQuestionsReady ||
                   !cameraHandler.cameraStream ||
-                  (!isResume && (!title.trim() || !resume))
+                  (!isRestart && (!title.trim() || !resume))
                 }
                 onClick={async () => {
                   if (!cameraHandler.cameraStream) {
