@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { type PermStatus } from '@/featured/interview/types'
 import { trackFunnel } from '@/shared/lib/utils/analytics'
 
@@ -65,14 +65,14 @@ export function useMicPermission(onStartPollingRequest: () => void): UseMicPermi
     }
   }
 
-  const cleanupMic = () => {
+  const cleanupMic = useCallback(() => {
     if (levelIntervalRef.current) clearInterval(levelIntervalRef.current)
     audioCtxRef.current?.close()
     audioCtxRef.current = null
     micStreamRef.current?.getTracks().forEach((t) => t.stop())
     micStreamRef.current = null
     setAudioLevel(0)
-  }
+  }, [])
 
   return {
     micStatus,
