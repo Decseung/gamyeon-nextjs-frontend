@@ -42,47 +42,47 @@ function FlipCard({ record }: FlipCardProps) {
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
 
-  // 이벤트 payload에서 반복해서 쓸 id 분리
   const reportId = record.report?.reportId
-  const intvId = record.intvId
 
   useEffect(() => {
-    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard') {
+    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard' && reportId) {
       trackEvent('report_gen_start', {
         category: 'ai_report',
-        report_id: reportId ?? '',
-        intv_id: intvId,
+        report_id: reportId,
       })
 
-      trackEvent('report_waiting_session', {
-        category: 'ai_report',
-        report_id: reportId ?? '',
-        intv_id: intvId,
-        page: 'history',
-        status: 'generating',
-      })
+      const waitingSessionKey = `report_waiting_session:${reportId}`
+
+      if (!sessionStorage.getItem(waitingSessionKey)) {
+        sessionStorage.setItem(waitingSessionKey, 'true')
+
+        trackEvent('report_waiting_session', {
+          category: 'ai_report',
+          report_id: reportId,
+          page: 'history',
+          status: 'generating',
+        })
+      }
     }
 
-    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard') {
+    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
       trackEvent('report_gen_complete', {
         category: 'ai_report',
-        report_id: reportId ?? '',
-        intv_id: intvId,
+        report_id: reportId,
       })
     }
 
     prevCardType.current = cardType
-  }, [cardType, reportId, intvId])
+  }, [cardType, reportId])
 
   const handleRageClick = useCallback(() => {
-    if (!isAnalysing) return
+    if (!isAnalysing || !reportId) return
 
     trackEvent(
       'report_waiting_rage_click',
       {
         category: 'user_frustration',
-        report_id: reportId ?? '',
-        intv_id: intvId,
+        report_id: reportId,
         page: 'history',
         status: 'generating',
         click_count: 3,
@@ -90,7 +90,7 @@ function FlipCard({ record }: FlipCardProps) {
       },
       { clarity: true },
     )
-  }, [isAnalysing, reportId, intvId])
+  }, [isAnalysing, reportId])
 
   // useRageClick을 FlipCard 내부로 이동
   // React 훅 규칙상 조건문 안에서 호출하면 안 되므로 항상 호출하고,
