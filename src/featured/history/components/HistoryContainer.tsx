@@ -99,13 +99,13 @@ function FlipCard({ record }: FlipCardProps) {
 
   if (!cardType) return null
 
+  // 카드 상태에 따라 완료 카드는 상세로 이동하고, 분석 중 카드는 rage click 후보로 등록
   const handleCardClick = () => {
     if (isCompleted) {
       router.push(`/report/${record.intvId}`)
       return
     }
 
-    //  분석 중 카드 영역 클릭만 rage click 카운트 등록
     if (isAnalysing) {
       registerRageClick()
     }
