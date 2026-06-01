@@ -41,6 +41,7 @@ function FlipCard({ record }: FlipCardProps) {
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
 
+  // AI 리포트 대기 마찰률: 리포트 단위 기준
   const reportId = record.report?.reportId
 
   useEffect(() => {
@@ -52,6 +53,7 @@ function FlipCard({ record }: FlipCardProps) {
 
       const waitingSessionKey = `report_waiting_session:${reportId}`
 
+      // 마찰률의 분모 이벤트, 같은 리포트 대기 건은 세션 내 1회만 잡음
       if (!sessionStorage.getItem(waitingSessionKey)) {
         sessionStorage.setItem(waitingSessionKey, 'true')
 
@@ -77,6 +79,7 @@ function FlipCard({ record }: FlipCardProps) {
   const handleRageClick = useCallback(() => {
     if (!isAnalysing || !reportId) return
 
+    // 분석 중 카드에서 2초 내 3회 클릭  감지되면 마찰 이벤트로 전송
     trackEvent(
       'report_waiting_rage_click',
       {
@@ -91,6 +94,7 @@ function FlipCard({ record }: FlipCardProps) {
     )
   }, [isAnalysing, reportId])
 
+  // 분노의 클릭 카운트 : 분석 중 카드 클릭에서만 수행
   const { registerRageClick } = useRageClick(handleRageClick)
 
   if (!cardType) return null
@@ -101,6 +105,7 @@ function FlipCard({ record }: FlipCardProps) {
       return
     }
 
+    //  분석 중 카드 영역 클릭만 rage click 카운트 등록
     if (isAnalysing) {
       registerRageClick()
     }
