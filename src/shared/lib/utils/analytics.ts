@@ -62,7 +62,10 @@ export const trackClarityEvent = (eventName: FunnelStep | string) => {
   if (!isBrowser() || typeof window.clarity !== 'function') return
 
   clarity.event(eventName)
-  logAnalyticsEvent('Clarity', eventName)
+
+  if (process.env.NODE_ENV === 'development') {
+    console.info('[Clarity:sent]', eventName)
+  }
 }
 
 export const trackEvent = (
