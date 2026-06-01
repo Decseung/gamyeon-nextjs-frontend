@@ -24,7 +24,14 @@ type FunnelStep =
   | 'mic_permission_denied' // 마이크 권한 거부
   | 'start_interview' // 면접 시작 버튼 클릭
 
-type EventParams = Record<string, string | number | boolean>
+  // 3. 면접 시작 후 플로우 점검
+  | 'complete_answer' // 답변 완료
+  | 'complete_interview' // 면접 최종 완료
+
+type EventParams = Record<string, string | number | boolean> & {
+  question_number?: number
+  category?: string
+}
 
 // string 대신 FunnelStep 타입을 적용
 export const trackEvent = (eventName: FunnelStep | string, params?: EventParams) => {

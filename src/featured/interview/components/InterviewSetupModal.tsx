@@ -26,7 +26,7 @@ import {
 import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
 import { toast } from 'sonner'
-import { trackEvent, trackFunnel } from '@/shared/lib/utils/analytics'
+import { trackEvent } from '@/shared/lib/utils/analytics'
 
 interface InterviewSetupModalProps {
   session: ReturnType<typeof useInterview>
@@ -80,7 +80,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
   useEffect(() => {
     if (!session.showSetup) return
 
-    trackFunnel('open_interview_modal')
+    trackEvent('open_interview_modal', { category: 'interview_setup' })
 
     const handleHistoryBack = () => {
       cleanupSetupDevices()
@@ -139,7 +139,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
           throw new Error(`${target.type} S3 업로드 실패`)
         }
 
-        trackFunnel('upload_s3_success')
+        trackEvent('upload_s3_success', { category: 'interview_setup' })
         uploadedFiles.push({
           fileType,
           originalFileName,
@@ -170,7 +170,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
       console.error('문서 업로드 중 오류:', error)
       const errorMessage = error instanceof Error ? error.message : '문서 업로드 중 오류 발생'
 
-      trackFunnel('upload_s3_error')
+      trackEvent('upload_s3_error', { category: 'interview_setup' })
       toast.error(errorMessage)
     } finally {
       setIsUploading(false)
@@ -230,7 +230,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
       const result = await updateInterviewTitleAction(session.interviewId, targetTitle)
       if (result.success) {
         setTitle(targetTitle)
-        trackFunnel('complete_title_input')
+        trackEvent('complete_title_input', { category: 'interview_setup' })
         completeStep(1)
       } else {
         toast.error(result.message || '면접 제목 수정 실패')
@@ -242,7 +242,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
           session.setInterviewId(result.data.intvId)
         }
         setTitle(targetTitle)
-        trackFunnel('complete_title_input')
+        trackEvent('complete_title_input', { category: 'interview_setup' })
         completeStep(1)
       } else {
         toast.error(result.message || '면접 생성 실패')
@@ -390,7 +390,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
                     await startInterviewAction(session.interviewId)
                   }
 
-                  trackFunnel('start_interview')
+                  trackEvent('start_interview', { category: 'interview_setup' })
                   session.handleSetupComplete({
                     title: title.trim() || '모의 면접',
                     basePose: cameraHandler.basePose,

@@ -16,6 +16,7 @@ import {
 } from '@/featured/interview/actions/interview.action'
 import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useVideoRecorder } from '@/featured/interview/hooks/useVideoRecorder'
+import { trackEvent } from '@/shared/lib/utils/analytics'
 
 export function useInterview() {
   const router = useRouter()
@@ -184,6 +185,10 @@ export function useInterview() {
           interviewId: currentInterviewId,
         }),
       )
+      trackEvent('complete_answer', {
+        question_number: questionIndex + 1,
+        category: 'interview_flow',
+      })
     } else {
       console.error('영상 업로드에 필요한 인터뷰 정보가 없습니다.')
     }
