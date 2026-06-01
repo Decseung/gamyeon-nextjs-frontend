@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Card } from '@/shared/ui/card'
@@ -34,42 +34,86 @@ function FlipCard({ record }: FlipCardProps) {
   const router = useRouter()
   const [isHovered, setIsHovered] = useState(false)
 
-  // 상태 감별사 함수로 무슨 카드 보여줄지 결정
   const cardType = getReportCardType(record.intvStatus, record.report?.reportStatus)
 
-  // 초기값을 null로 설정하여 과거 상태를 비워둡니다.
-  // 방금 화면에 들어왔습니다. 메모장은 비어있습니다. (prevCardType.current === null)
   const prevCardType = useRef<string | null>(null)
 
-  useEffect(() => {
-    // 1. 리포트 생성 시작 시 (Start)
-    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard') {
-      trackEvent('report_gen_start', { category: 'ai_report' })
-    }
-
-    // 2. 리포트 생성 완료 시 (Complete)
-    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard') {
-      trackEvent('report_gen_complete', { category: 'ai_report' })
-    }
-
-    // 다음 상태 비교를 위해, 현재 상태를 '과거'로 메모지에 적어둠
-    prevCardType.current = cardType
-  }, [cardType])
-
-  //  보여줄 카드 타입이 없으면(null) 렌더링을 중단하고 아무것도 안 그림
-  if (!cardType) return null
   const isCompleted = cardType === 'completedCard'
+  const isAnalysing = cardType === 'analysingCard'
 
-  const handleClick = () => {
-    // 분석 완료 카드만 상세 페이지로 이동 가능
+  // AI 리포트 대기 마찰률: 리포트 단위 기준
+  const reportId = record.report?.reportId
+
+  useEffect(() => {
+    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard' && reportId) {
+      trackEvent('report_gen_start', {
+        category: 'ai_report',
+        report_id: reportId,
+      })
+
+      const waitingSessionKey = `report_waiting_session:${reportId}`
+
+      // 마찰률의 분모 이벤트, 같은 리포트 대기 건은 세션 내 1회만 잡음
+      if (!sessionStorage.getItem(waitingSessionKey)) {
+        sessionStorage.setItem(waitingSessionKey, 'true')
+
+        trackEvent('report_waiting_session', {
+          category: 'ai_report',
+          report_id: reportId,
+          page: 'history',
+          status: 'generating',
+        })
+      }
+    }
+
+    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
+      trackEvent('report_gen_complete', {
+        category: 'ai_report',
+        report_id: reportId,
+      })
+    }
+
+    prevCardType.current = cardType
+  }, [cardType, reportId])
+
+  const handleRageClick = useCallback(() => {
+    if (!isAnalysing || !reportId) return
+
+    // 분석 중 카드에서 2초 내 3회 클릭  감지되면 마찰 이벤트로 전송
+    trackEvent(
+      'report_waiting_rage_click',
+      {
+        category: 'user_frustration',
+        report_id: reportId,
+        page: 'history',
+        status: 'generating',
+        click_count: 3,
+        window_ms: 2000,
+      },
+      { clarity: true },
+    )
+  }, [isAnalysing, reportId])
+
+  // 분노의 클릭 카운트 : 분석 중 카드 클릭에서만 수행
+  const { registerRageClick } = useRageClick(handleRageClick)
+
+  if (!cardType) return null
+
+  // 카드 상태에 따라 완료 카드는 상세로 이동하고, 분석 중 카드는 rage click 후보로 등록
+  const handleCardClick = () => {
     if (isCompleted) {
       router.push(`/report/${record.intvId}`)
+      return
+    }
+
+    if (isAnalysing) {
+      registerRageClick()
     }
   }
 
   return (
     <div
-      onClick={handleClick}
+      onClick={handleCardClick}
       onMouseEnter={() => {
         if (isCompleted) {
           setIsHovered(true)
@@ -89,6 +133,7 @@ function FlipCard({ record }: FlipCardProps) {
           {cardType === 'analysingCard' && <AnalysingCard />}
           {cardType === 'failedCard' && <FailedCard record={record} />}
         </Card>
+
         {isCompleted && (
           <Card
             className="absolute inset-0 overflow-hidden antialiased backface-hidden"
@@ -108,47 +153,10 @@ export function HistoryContainer({
   currentPage,
   itemsPerPage,
 }: HistoryContainerProps) {
-  // 면접 데이터 없게 들어오는지 test
-  console.log('실제 API에서 넘어온 면접 데이터:', records)
-
   const start = (currentPage - 1) * itemsPerPage
-
-  // 잠시 테스트를 위해 records 대신 MOCK_RECORDS를 사용하도록 변경
-  // const pageRecords = MOCK_RECORDS.slice(start, start + itemsPerPage)
-  // 테스트가 끝나면 다시 records로
   const pageRecords = records.slice(start, start + itemsPerPage)
 
-  // 1. 현재 화면에 'AI 리포트 분석 중'인 카드가 한 개라도 존재하는지 실시간 체크
-  const hasAnalysingCard = pageRecords.some(
-    (record) =>
-      getReportCardType(record.intvStatus, record.report?.reportStatus) === 'analysingCard',
-  )
-
-  // 2. 분노 클릭 조건 만족 시 실행할 통합 전송 핸들러
-  const handleRageClick = () => {
-    // 분석 중인 카드가 화면에 있을 때만 이벤트를 발송합니다.
-    if (!hasAnalysingCard) return
-
-    // [GA4 전송] - 명세서에 등록한 'rage_click' 이벤트 발송
-    trackEvent('rage_click', {
-      category: 'user_frustration',
-      label: 'ai_report_waiting',
-      screen_name: 'history_page_global',
-    })
-
-    // [MS Clarity 스마트 연동] - 대시보드 커스텀 필터용 타겟팅 이벤트
-    if (typeof window !== 'undefined' && typeof window.clarity === 'function') {
-      window.clarity('event', 'rage_click')
-    }
-  }
-
-  //  3. useRageClick 훅 활용
-  const { handleContainerClick } = useRageClick(handleRageClick)
-
-  // 수정 전:
   if (records.length === 0) {
-    // 수정 후: 목데이터를 기준으로 빈 화면인지 체크하도록 변경
-    // if (pageRecords.length === 0) {
     if (search) {
       return (
         <motion.div
@@ -197,10 +205,7 @@ export function HistoryContainer({
   }
 
   return (
-    <div
-      onClick={handleContainerClick}
-      className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5"
-    >
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
       {pageRecords.map((record, i) => (
         <motion.div
           key={record.intvId}

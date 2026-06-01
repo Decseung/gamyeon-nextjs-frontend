@@ -1,5 +1,11 @@
 import { sendGAEvent } from '@next/third-parties/google'
 
+declare global {
+  interface Window {
+    clarity?: (...args: unknown[]) => void
+  }
+}
+
 // 기획 단계에서 정의한 이벤트 명세
 type FunnelStep =
   // 1. AI 대기 및 리포트 관련 이벤트들
@@ -8,7 +14,8 @@ type FunnelStep =
   | 'report_gen_start' // 리포트 생성 시작
   | 'report_gen_complete' // 리포트 생성 완료
   | 'loading_tab_leave' // 리포트 발행 로딩 중 탭 이탈
-  | 'rage_click' // 분노의 클릭
+  | 'report_waiting_session' // 리포트 생성 대기 중 전체 세션
+  | 'report_waiting_rage_click' // 리포트 생성 대기 중 분노의 클릭
 
   // 2. 파일 업로드 및 면접 시작 플로우 점검
   | 'open_interview_modal' // 모달창 최초 진입 (1단계)
@@ -33,10 +40,45 @@ type EventParams = Record<string, string | number | boolean> & {
   category?: string
 }
 
-// string 대신 FunnelStep 타입을 적용
-export const trackEvent = (eventName: FunnelStep | string, params?: EventParams) => {
+interface TrackEventOptions {
+  clarity?: boolean
+}
+
+const isBrowser = () => typeof window !== 'undefined'
+
+const logAnalyticsEvent = (
+  destination: 'GA4' | 'Clarity',
+  eventName: FunnelStep | string,
+  params?: EventParams,
+) => {
+  if (process.env.NODE_ENV !== 'development') return
+
+  // 개발 환경에서는 콘솔에 이벤트 로깅 (GA4와 Clarity 구분)
+  console.info(`[${destination}] event: ${eventName}`, params || {})
+}
+
+export const trackClarityEvent = (eventName: FunnelStep | string) => {
+  if (!isBrowser() || typeof window.clarity !== 'function') return
+
+  window.clarity('event', eventName)
+
+  if (process.env.NODE_ENV === 'development') {
+    console.info('[Clarity:sent]', eventName)
+  }
+}
+
+export const trackEvent = (
+  eventName: FunnelStep | string,
+  params?: EventParams,
+  options?: TrackEventOptions,
+) => {
   const isDev = process.env.NODE_ENV === 'development'
   sendGAEvent('event', eventName, { ...(params || {}), ...(isDev && { debug_mode: true }) })
+  logAnalyticsEvent('GA4', eventName, params)
+
+  if (options?.clarity) {
+    trackClarityEvent(eventName)
+  }
 }
 
 // 퍼널 함수에는 더 엄격하게 FunnelStep 타입만 허용
