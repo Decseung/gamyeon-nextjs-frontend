@@ -1,5 +1,4 @@
 import { sendGAEvent } from '@next/third-parties/google'
-import clarity from '@microsoft/clarity'
 
 declare global {
   interface Window {
@@ -61,7 +60,7 @@ const logAnalyticsEvent = (
 export const trackClarityEvent = (eventName: FunnelStep | string) => {
   if (!isBrowser() || typeof window.clarity !== 'function') return
 
-  clarity.event(eventName)
+  window.clarity('event', eventName)
 
   if (process.env.NODE_ENV === 'development') {
     console.info('[Clarity:sent]', eventName)
