@@ -54,6 +54,7 @@ const logAnalyticsEvent = (
 ) => {
   if (process.env.NODE_ENV !== 'development') return
 
+  // 개발 환경에서는 콘솔에 이벤트 로깅 (GA4와 Clarity 구분)
   console.info(`[${destination}] event: ${eventName}`, params || {})
 }
 
@@ -64,10 +65,18 @@ export const trackClarityEvent = (eventName: FunnelStep | string) => {
   logAnalyticsEvent('Clarity', eventName)
 }
 
-// string 대신 FunnelStep 타입을 적용
-export const trackEvent = (eventName: FunnelStep | string, params?: EventParams) => {
+export const trackEvent = (
+  eventName: FunnelStep | string,
+  params?: EventParams,
+  options?: TrackEventOptions,
+) => {
   const isDev = process.env.NODE_ENV === 'development'
   sendGAEvent('event', eventName, { ...(params || {}), ...(isDev && { debug_mode: true }) })
+  logAnalyticsEvent('GA4', eventName, params)
+
+  if (options?.clarity) {
+    trackClarityEvent(eventName)
+  }
 }
 
 // 퍼널 함수에는 더 엄격하게 FunnelStep 타입만 허용
