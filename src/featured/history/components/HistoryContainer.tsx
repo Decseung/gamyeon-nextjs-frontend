@@ -38,7 +38,6 @@ function FlipCard({ record }: FlipCardProps) {
 
   const prevCardType = useRef<string | null>(null)
 
-  // 카드 상태를 boolean으로 분리
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
 
@@ -92,23 +91,18 @@ function FlipCard({ record }: FlipCardProps) {
     )
   }, [isAnalysing, reportId])
 
-  // useRageClick을 FlipCard 내부로 이동
-  // React 훅 규칙상 조건문 안에서 호출하면 안 되므로 항상 호출하고,
-  // 실제 실행은 handleCardClick에서 isAnalysing일 때만 함
-  const { handleContainerClick } = useRageClick(handleRageClick)
+  const { registerRageClick } = useRageClick(handleRageClick)
 
   if (!cardType) return null
 
-  // 완료 카드 클릭과 분석 중 카드 클릭을 하나의 핸들러에서 분기
   const handleCardClick = () => {
     if (isCompleted) {
       router.push(`/report/${record.intvId}`)
       return
     }
 
-    //  분석 중 카드일 때만 rage click 카운트 증가
     if (isAnalysing) {
-      handleContainerClick()
+      registerRageClick()
     }
   }
 

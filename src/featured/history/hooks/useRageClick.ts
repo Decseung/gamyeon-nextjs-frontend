@@ -18,8 +18,7 @@ export function useRageClick(onRageClick: () => void, options: RageClickOptions 
     }
   }, [])
 
-  // 2. 외부에서 사용할 클릭 핸들러 (useCallback으로 최적화)
-  const handleContainerClick = useCallback(() => {
+  const registerRageClick = useCallback(() => {
     clickCountRef.current += 1
 
     if (timerRef.current) {
@@ -38,5 +37,5 @@ export function useRageClick(onRageClick: () => void, options: RageClickOptions 
   }, [onRageClick, limit, windowMs])
 
   // 이제 외부로 굳이 타이머 클리어 함수를 내보내지 않아도 안전합니다!
-  return { handleContainerClick }
+  return { registerRageClick }
 }
