@@ -13,7 +13,7 @@ type FunnelStep =
   | 'question_gen_complete' // 질문 생성 완료
   | 'report_gen_start' // 리포트 생성 시작
   | 'report_gen_complete' // 리포트 생성 완료
-  | 'loading_tab_leave' // 리포트 발행 로딩 중 탭 이탈
+  | 'report_waiting_hidden' // 리포트 대기 중 화면 비활성화
   | 'report_waiting_session' // 리포트 생성 대기 중 전체 세션
   | 'report_waiting_rage_click' // 리포트 생성 대기 중 분노의 클릭
 
@@ -57,14 +57,12 @@ const logAnalyticsEvent = (
   console.info(`[${destination}] event: ${eventName}`, params || {})
 }
 
+// Microsoft Clarity에 커스텀 이벤트를 전송하는 함수
 export const trackClarityEvent = (eventName: FunnelStep | string) => {
   if (!isBrowser() || typeof window.clarity !== 'function') return
 
   window.clarity('event', eventName)
-
-  if (process.env.NODE_ENV === 'development') {
-    console.info('[Clarity:sent]', eventName)
-  }
+  logAnalyticsEvent('Clarity', eventName)
 }
 
 export const trackEvent = (
@@ -72,6 +70,8 @@ export const trackEvent = (
   params?: EventParams,
   options?: TrackEventOptions,
 ) => {
+  if (!isBrowser()) return
+
   const isDev = process.env.NODE_ENV === 'development'
   sendGAEvent('event', eventName, { ...(params || {}), ...(isDev && { debug_mode: true }) })
   logAnalyticsEvent('GA4', eventName, params)
