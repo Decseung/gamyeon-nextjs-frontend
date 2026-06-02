@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Card } from '@/shared/ui/card'
@@ -18,6 +18,7 @@ import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
 import { trackEvent } from '@/shared/lib/utils/analytics'
 import { useRageClick } from '../hooks/useRageClick'
+import { usePageVisibilityTracker } from '../hooks/usePageVisibilityTracker'
 
 interface HistoryContainerProps {
   records: InterviewReportItem[]
@@ -154,7 +155,20 @@ export function HistoryContainer({
   itemsPerPage,
 }: HistoryContainerProps) {
   const start = (currentPage - 1) * itemsPerPage
-  const pageRecords = records.slice(start, start + itemsPerPage)
+  const pageRecords = useMemo(() => {
+    return records.slice(start, start + itemsPerPage)
+  }, [itemsPerPage, records, start])
+
+  const analysingReportIds = useMemo(() => {
+    return pageRecords
+      .filter((record) => {
+        return getReportCardType(record.intvStatus, record.report?.reportStatus) === 'analysingCard'
+      })
+      .map((record) => record.report?.reportId)
+      .filter((reportId): reportId is number => reportId != null)
+  }, [pageRecords])
+
+  usePageVisibilityTracker(analysingReportIds.length > 0, analysingReportIds)
 
   if (records.length === 0) {
     if (search) {
