@@ -1,10 +1,5 @@
 import { sendGAEvent } from '@next/third-parties/google'
-
-declare global {
-  interface Window {
-    clarity?: (...args: unknown[]) => void
-  }
-}
+import clarity from '@microsoft/clarity'
 
 // 기획 단계에서 정의한 이벤트 명세
 type FunnelStep =
@@ -45,24 +40,17 @@ interface TrackEventOptions {
 }
 
 const isBrowser = () => typeof window !== 'undefined'
+const isDev = process.env.NODE_ENV === 'development'
 
-const logAnalyticsEvent = (
-  destination: 'GA4' | 'Clarity',
-  eventName: FunnelStep | string,
-  params?: EventParams,
-) => {
-  if (process.env.NODE_ENV !== 'development') return
-
-  // 개발 환경에서는 콘솔에 이벤트 로깅 (GA4와 Clarity 구분)
-  console.info(`[${destination}] event: ${eventName}`, params || {})
-}
-
-// Microsoft Clarity에 커스텀 이벤트를 전송하는 함수
 export const trackClarityEvent = (eventName: FunnelStep | string) => {
-  if (!isBrowser() || typeof window.clarity !== 'function') return
+  if (!isBrowser()) return
 
-  window.clarity('event', eventName)
-  logAnalyticsEvent('Clarity', eventName)
+  try {
+    clarity.event(eventName)
+  } catch (error) {
+    if (isDev) console.warn('[Clarity] event failed:', eventName, error)
+  }
+  if (isDev) console.info(`[Clarity] event: ${eventName}`)
 }
 
 export const trackEvent = (
@@ -72,9 +60,7 @@ export const trackEvent = (
 ) => {
   if (!isBrowser()) return
 
-  const isDev = process.env.NODE_ENV === 'development'
   sendGAEvent('event', eventName, { ...(params || {}), ...(isDev && { debug_mode: true }) })
-  logAnalyticsEvent('GA4', eventName, params)
 
   if (options?.clarity) {
     trackClarityEvent(eventName)
