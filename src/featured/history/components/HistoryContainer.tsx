@@ -18,6 +18,7 @@ import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
 import { trackEvent } from '@/shared/lib/utils/analytics'
 import { useRageClick } from '../hooks/useRageClick'
+import { usePageVisibilityTracker } from '../hooks/usePageVisibilityTracker'
 
 interface HistoryContainerProps {
   records: InterviewReportItem[]
@@ -155,6 +156,11 @@ export function HistoryContainer({
 }: HistoryContainerProps) {
   const start = (currentPage - 1) * itemsPerPage
   const pageRecords = records.slice(start, start + itemsPerPage)
+  const hasAnalysingCard = pageRecords.some((record) => {
+    return getReportCardType(record.intvStatus, record.report?.reportStatus) === 'analysingCard'
+  })
+
+  usePageVisibilityTracker(hasAnalysingCard)
 
   if (records.length === 0) {
     if (search) {

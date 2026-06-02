@@ -1,9 +1,7 @@
 import { motion } from 'framer-motion'
 import { RotateCw } from 'lucide-react'
-import { useTabSwitchTracker } from '../../hooks/useTabSwitchTracker'
 
 export function AnalysingCard() {
-  useTabSwitchTracker(true)
   return (
     <div className="flex h-full flex-col items-center justify-center p-3 text-center @[180px]:p-4 @[220px]:p-5 @[280px]:p-6">
       <div className="mb-2 rounded-full bg-yellow-100 p-3 @[180px]:mb-3 @[180px]:p-4 @[220px]:p-5 @[280px]:mb-4 @[280px]:p-6">
