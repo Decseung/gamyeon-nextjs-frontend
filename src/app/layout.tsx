@@ -65,7 +65,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || ''} />
+        <GoogleAnalytics
+          gaId={process.env.NEXT_PUBLIC_GA_ID || ''}
+          debugMode={process.env.NODE_ENV === 'development'}
+        />
         <ClarityProvider clarityId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || ''} />
         <ReactQueryProvider>
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>

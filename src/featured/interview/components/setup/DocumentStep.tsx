@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/shared/ui/dialog'
 import { useEffect, useState } from 'react'
-import { trackFunnel } from '@/shared/lib/utils/analytics'
+import { trackEvent } from '@/shared/lib/utils/analytics'
 interface DocumentStepProps {
   resume: File | null
   portfolio: File | null
@@ -33,7 +33,7 @@ export function DocumentStep({
 }: DocumentStepProps) {
   // GA4 이벤트 전송 코드 수정 (중복 제거 및 단축키 사용)
   useEffect(() => {
-    trackFunnel('enter_upload_step')
+    trackEvent('enter_upload_step', { category: 'interview_setup' })
   }, [])
 
   const [confirmOpen, setConfirmOpen] = useState(false)

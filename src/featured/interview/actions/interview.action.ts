@@ -27,7 +27,7 @@ import {
   issueVideoPresignedUrl,
   pauseInterview,
   requestAnswerAnalysis,
-  resumeInterview,
+  restartInterview,
   sendGazeStats,
   startInterview,
   updateInterviewTitle,
@@ -130,16 +130,17 @@ export async function sendGazeStatsAction(questionSetId: number, payload: Interv
   return withAction(() => sendGazeStats(questionSetId, payload))
 }
 
-// MVP2
 // 면접 시작
 export async function startInterviewAction(intvId: number): Promise<ApiResponse<null>> {
   return withAction(() => startInterview(intvId))
 }
+
 // 면접 중단
 export async function pauseInterviewAction(intvId: number): Promise<ApiResponse<null>> {
   return withAction(() => pauseInterview(intvId))
 }
+
 // 면접 재개
-export async function resumeInterviewAction(intvId: number): Promise<ApiResponse<null>> {
-  return withAction(() => resumeInterview(intvId))
+export async function restartInterviewAction(intvId: number): Promise<ApiResponse<null>> {
+  return withAction(() => restartInterview(intvId))
 }

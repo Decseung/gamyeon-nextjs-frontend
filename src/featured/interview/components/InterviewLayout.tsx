@@ -10,7 +10,7 @@ import { useInterview } from '@/featured/interview/hooks/useInterview'
 export function InterviewLayout() {
   const session = useInterview()
   const searchParams = useSearchParams()
-  const isResume = searchParams.get('resume') === 'true'
+  const isRestart = searchParams.get('restart') === 'true'
 
   useEffect(() => {
     const { interviewId, phase } = session
@@ -36,7 +36,7 @@ export function InterviewLayout() {
     <>
       <InterviewContainer session={session} />
       <EndDialogModal session={session} />
-      <InterviewSetupModal session={session} isResume={isResume} />
+      <InterviewSetupModal session={session} isRestart={isRestart} />
     </>
   )
 }

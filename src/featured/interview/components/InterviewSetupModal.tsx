@@ -26,23 +26,23 @@ import {
 import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
 import { toast } from 'sonner'
-import { trackEvent, trackFunnel } from '@/shared/lib/utils/analytics'
+import { trackEvent } from '@/shared/lib/utils/analytics'
 
 interface InterviewSetupModalProps {
   session: ReturnType<typeof useInterview>
-  isResume?: boolean
+  isRestart?: boolean
 }
 
 const RESUME_LOCKED_STEPS = [1, 2]
 const STEP2_LOCKED = [2]
 
-export function InterviewSetupModal({ session, isResume = false }: InterviewSetupModalProps) {
+export function InterviewSetupModal({ session, isRestart = false }: InterviewSetupModalProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() =>
-    isResume ? new Set([1, 2]) : new Set(),
+    isRestart ? new Set([1, 2]) : new Set(),
   )
-  const [isStep2Locked, setIsStep2Locked] = useState(isResume)
-  const [currentStep, setCurrentStep] = useState(() => (isResume ? 3 : 1))
-  const [maxReachedStep, setMaxReachedStep] = useState(() => (isResume ? 3 : 1))
+  const [isStep2Locked, setIsStep2Locked] = useState(isRestart)
+  const [currentStep, setCurrentStep] = useState(() => (isRestart ? 3 : 1))
+  const [maxReachedStep, setMaxReachedStep] = useState(() => (isRestart ? 3 : 1))
   const [title, setTitle] = useState('')
   const [resume, setResume] = useState<File | null>(null)
   const [portfolio, setPortfolio] = useState<File | null>(null)
@@ -80,7 +80,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
   useEffect(() => {
     if (!session.showSetup) return
 
-    trackFunnel('open_interview_modal')
+    trackEvent('open_interview_modal', { category: 'interview_setup' })
 
     const handleHistoryBack = () => {
       cleanupSetupDevices()
@@ -139,7 +139,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
           throw new Error(`${target.type} S3 업로드 실패`)
         }
 
-        trackFunnel('upload_s3_success')
+        trackEvent('upload_s3_success', { category: 'interview_setup' })
         uploadedFiles.push({
           fileType,
           originalFileName,
@@ -164,13 +164,13 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       setIsStep2Locked(true)
 
       // 질문 생성을 기다리는 시간의 시작점 코드 추가 - GA 이벤트 전송
-      trackEvent('question_gen_start', { category: 'ai_interview' })
+      trackEvent('question_gen_start', { category: 'user_interview' })
       generateInterviewQuestionAction(session.interviewId).catch((err) => console.error(err))
     } catch (error) {
       console.error('문서 업로드 중 오류:', error)
       const errorMessage = error instanceof Error ? error.message : '문서 업로드 중 오류 발생'
 
-      trackFunnel('upload_s3_error')
+      trackEvent('upload_s3_error', { category: 'interview_setup' })
       toast.error(errorMessage)
     } finally {
       setIsUploading(false)
@@ -204,7 +204,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
 
   const navigateToStep = (step: number) => {
     if (step === 2 && isStep2Locked) return
-    if (step === 1 && isResume) return
+    if (step === 1 && isRestart) return
     if (maxReachedStep >= 4 || completedSteps.has(step)) {
       if (step === 1) {
         void syncInterviewTitle()
@@ -230,7 +230,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
       const result = await updateInterviewTitleAction(session.interviewId, targetTitle)
       if (result.success) {
         setTitle(targetTitle)
-        trackFunnel('complete_title_input')
+        trackEvent('complete_title_input', { category: 'interview_setup' })
         completeStep(1)
       } else {
         toast.error(result.message || '면접 제목 수정 실패')
@@ -242,7 +242,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
           session.setInterviewId(result.data.intvId)
         }
         setTitle(targetTitle)
-        trackFunnel('complete_title_input')
+        trackEvent('complete_title_input', { category: 'interview_setup' })
         completeStep(1)
       } else {
         toast.error(result.message || '면접 생성 실패')
@@ -352,7 +352,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
             doneCount={doneCount}
             onStepClick={navigateToStep}
             freeNavigation={maxReachedStep >= 4}
-            lockedSteps={isResume ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
+            lockedSteps={isRestart ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
           />
           <div className="flex flex-1 flex-col">
             <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
@@ -378,7 +378,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
                   !allDone ||
                   !isQuestionsReady ||
                   !cameraHandler.cameraStream ||
-                  (!isResume && (!title.trim() || !resume))
+                  (!isRestart && (!title.trim() || !resume))
                 }
                 onClick={async () => {
                   if (!cameraHandler.cameraStream) {
@@ -390,7 +390,7 @@ export function InterviewSetupModal({ session, isResume = false }: InterviewSetu
                     await startInterviewAction(session.interviewId)
                   }
 
-                  trackFunnel('start_interview')
+                  trackEvent('start_interview', { category: 'interview_setup' })
                   session.handleSetupComplete({
                     title: title.trim() || '모의 면접',
                     basePose: cameraHandler.basePose,

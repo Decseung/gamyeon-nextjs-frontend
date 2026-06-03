@@ -1,4 +1,5 @@
 import { sendGAEvent } from '@next/third-parties/google'
+import clarity from '@microsoft/clarity'
 
 // 기획 단계에서 정의한 이벤트 명세
 type FunnelStep =
@@ -7,7 +8,9 @@ type FunnelStep =
   | 'question_gen_complete' // 질문 생성 완료
   | 'report_gen_start' // 리포트 생성 시작
   | 'report_gen_complete' // 리포트 생성 완료
-  | 'loading_tab_leave' // 리포트 발행 로딩 중 탭 이탈
+  | 'report_waiting_hidden' // 리포트 대기 중 화면 비활성화
+  | 'report_waiting_session' // 리포트 생성 대기 중 전체 세션
+  | 'report_waiting_rage_click' // 리포트 생성 대기 중 분노의 클릭
 
   // 2. 파일 업로드 및 면접 시작 플로우 점검
   | 'open_interview_modal' // 모달창 최초 진입 (1단계)
@@ -23,11 +26,45 @@ type FunnelStep =
   | 'mic_permission_denied' // 마이크 권한 거부
   | 'start_interview' // 면접 시작 버튼 클릭
 
-type EventParams = Record<string, string | number | boolean>
+  // 3. 면접 시작 후 플로우 점검
+  | 'complete_answer' // 답변 완료
+  | 'complete_interview' // 면접 최종 완료
 
-// string 대신 FunnelStep 타입을 적용
-export const trackEvent = (eventName: FunnelStep | string, params?: EventParams) => {
-  sendGAEvent('event', eventName, params || {})
+type EventParams = Record<string, string | number | boolean> & {
+  question_number?: number
+  category?: string
+}
+
+interface TrackEventOptions {
+  clarity?: boolean
+}
+
+const isBrowser = () => typeof window !== 'undefined'
+const isDev = process.env.NODE_ENV === 'development'
+
+export const trackClarityEvent = (eventName: FunnelStep | string) => {
+  if (!isBrowser()) return
+
+  try {
+    clarity.event(eventName)
+  } catch (error) {
+    if (isDev) console.warn('[Clarity] event failed:', eventName, error)
+  }
+  if (isDev) console.info(`[Clarity] event: ${eventName}`)
+}
+
+export const trackEvent = (
+  eventName: FunnelStep | string,
+  params?: EventParams,
+  options?: TrackEventOptions,
+) => {
+  if (!isBrowser()) return
+
+  sendGAEvent('event', eventName, { ...(params || {}), ...(isDev && { debug_mode: true }) })
+
+  if (options?.clarity) {
+    trackClarityEvent(eventName)
+  }
 }
 
 // 퍼널 함수에는 더 엄격하게 FunnelStep 타입만 허용

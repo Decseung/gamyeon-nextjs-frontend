@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Card } from '@/shared/ui/card'
@@ -17,74 +17,8 @@ import { FailedCard } from '@/featured/history/components/cards/FailedCard'
 import { PendingCard } from './cards/PendingCard'
 import { AnalysingCard } from './cards/AnalysingCard'
 import { trackEvent } from '@/shared/lib/utils/analytics'
-import { sendGAEvent } from '@next/third-parties/google'
-import { tr, track } from 'framer-motion/client'
-
-// 3. 테스트용 목데이터 (이어하기 테스트 명확화 및 상태값 적용)
-// const MOCK_RECORDS: InterviewReportItem[] = [
-//   {
-//     intvId: 1,
-//     intvTitle: '프론트엔드 직무 면접 (분석 완료 테스트)',
-//     intvStatus: 'FINISHED',
-//     durationMs: 3600000,
-//     updatedAt: '2026-03-15T10:00:00Z',
-//     report: {
-//       reportId: 101,
-//       reportStatus: 'SUCCEED',
-//       totalScore: 85,
-//       answeredCount: 5,
-//       strengths: ['React', 'TypeScript'],
-//       weaknesses: ['CS 지식'],
-//     },
-//   },
-//   {
-//     intvId: 2,
-//     intvTitle: '프론트엔드 직무 면접 (분석 중 테스트)',
-//     intvStatus: 'FINISHED',
-//     durationMs: 2400000,
-//     updatedAt: '2026-03-15T11:00:00Z',
-//     report: {
-//       reportId: 102,
-//       reportStatus: 'IN_PROGRESS',
-//       totalScore: null,
-//       answeredCount: 4,
-//       strengths: null,
-//       weaknesses: null,
-//     },
-//   },
-//   {
-//     intvId: 3,
-//     intvTitle: '프론트엔드 직무 면접 (분석 실패 테스트)',
-//     intvStatus: 'FINISHED',
-//     durationMs: 1800000,
-//     updatedAt: '2026-03-15T12:00:00Z',
-//     report: {
-//       reportId: 103,
-//       reportStatus: 'FAILED',
-//       totalScore: null,
-//       answeredCount: 2,
-//       strengths: null,
-//       weaknesses: null,
-//     },
-//   },
-//   {
-//     intvId: 4,
-//     intvTitle: '프론트엔드 직무 면접 (이어하기 UI 테스트)',
-//     intvStatus: 'PAUSED',
-//     durationMs: null,
-//     updatedAt: '2026-03-15T13:00:00Z',
-//     report: null,
-//   },
-//   {
-//     // 테스트: 이 카드가 화면에서 아예 사라지는지 확인합니다
-//     intvId: 5,
-//     intvTitle: 'READY 상태 테스트',
-//     intvStatus: 'READY',
-//     durationMs: null,
-//     updatedAt: '2026-03-15T13:00:00Z',
-//     report: null,
-//   },
-// ]
+import { useRageClick } from '../hooks/useRageClick'
+import { usePageVisibilityTracker } from '../hooks/usePageVisibilityTracker'
 
 interface HistoryContainerProps {
   records: InterviewReportItem[]
@@ -101,42 +35,86 @@ function FlipCard({ record }: FlipCardProps) {
   const router = useRouter()
   const [isHovered, setIsHovered] = useState(false)
 
-  // 상태 감별사 함수로 무슨 카드 보여줄지 결정
   const cardType = getReportCardType(record.intvStatus, record.report?.reportStatus)
 
-  // 초기값을 null로 설정하여 과거 상태를 비워둡니다.
-  // 방금 화면에 들어왔습니다. 메모장은 비어있습니다. (prevCardType.current === null)
   const prevCardType = useRef<string | null>(null)
 
-  useEffect(() => {
-    // 1. 리포트 생성 시작 시 (Start)
-    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard') {
-      trackEvent('report_gen_start', { category: 'ai_report' })
-    }
-
-    // 2. 리포트 생성 완료 시 (Complete)
-    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard') {
-      trackEvent('report_gen_complete', { category: 'ai_report' })
-    }
-
-    // 다음 상태 비교를 위해, 현재 상태를 '과거'로 메모지에 적어둠
-    prevCardType.current = cardType
-  }, [cardType])
-
-  //  보여줄 카드 타입이 없으면(null) 렌더링을 중단하고 아무것도 안 그림
-  if (!cardType) return null
   const isCompleted = cardType === 'completedCard'
+  const isAnalysing = cardType === 'analysingCard'
 
-  const handleClick = () => {
-    // 분석 완료 카드만 상세 페이지로 이동 가능
+  // AI 리포트 대기 마찰률: 리포트 단위 기준
+  const reportId = record.report?.reportId
+
+  useEffect(() => {
+    if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard' && reportId) {
+      trackEvent('report_gen_start', {
+        category: 'ai_report',
+        report_id: reportId,
+      })
+
+      const waitingSessionKey = `report_waiting_session:${reportId}`
+
+      // 마찰률의 분모 이벤트, 같은 리포트 대기 건은 세션 내 1회만 잡음
+      if (!sessionStorage.getItem(waitingSessionKey)) {
+        sessionStorage.setItem(waitingSessionKey, 'true')
+
+        trackEvent('report_waiting_session', {
+          category: 'ai_report',
+          report_id: reportId,
+          page: 'history',
+          status: 'generating',
+        })
+      }
+    }
+
+    if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
+      trackEvent('report_gen_complete', {
+        category: 'ai_report',
+        report_id: reportId,
+      })
+    }
+
+    prevCardType.current = cardType
+  }, [cardType, reportId])
+
+  const handleRageClick = useCallback(() => {
+    if (!isAnalysing || !reportId) return
+
+    // 분석 중 카드에서 2초 내 3회 클릭  감지되면 마찰 이벤트로 전송
+    trackEvent(
+      'report_waiting_rage_click',
+      {
+        category: 'user_frustration',
+        report_id: reportId,
+        page: 'history',
+        status: 'generating',
+        click_count: 3,
+        window_ms: 2000,
+      },
+      { clarity: true },
+    )
+  }, [isAnalysing, reportId])
+
+  // 분노의 클릭 카운트 : 분석 중 카드 클릭에서만 수행
+  const { registerRageClick } = useRageClick(handleRageClick)
+
+  if (!cardType) return null
+
+  // 카드 상태에 따라 완료 카드는 상세로 이동하고, 분석 중 카드는 rage click 후보로 등록
+  const handleCardClick = () => {
     if (isCompleted) {
       router.push(`/report/${record.intvId}`)
+      return
+    }
+
+    if (isAnalysing) {
+      registerRageClick()
     }
   }
 
   return (
     <div
-      onClick={handleClick}
+      onClick={handleCardClick}
       onMouseEnter={() => {
         if (isCompleted) {
           setIsHovered(true)
@@ -156,6 +134,7 @@ function FlipCard({ record }: FlipCardProps) {
           {cardType === 'analysingCard' && <AnalysingCard />}
           {cardType === 'failedCard' && <FailedCard record={record} />}
         </Card>
+
         {isCompleted && (
           <Card
             className="absolute inset-0 overflow-hidden antialiased backface-hidden"
@@ -175,20 +154,23 @@ export function HistoryContainer({
   currentPage,
   itemsPerPage,
 }: HistoryContainerProps) {
-  // 면접 데이터 없게 들어오는지 test
-  console.log('실제 API에서 넘어온 면접 데이터:', records)
-
   const start = (currentPage - 1) * itemsPerPage
+  const pageRecords = useMemo(() => {
+    return records.slice(start, start + itemsPerPage)
+  }, [itemsPerPage, records, start])
 
-  // 잠시 테스트를 위해 records 대신 MOCK_RECORDS를 사용하도록 변경
-  // const pageRecords = MOCK_RECORDS.slice(start, start + itemsPerPage)
-  // 테스트가 끝나면 다시 records로
-  const pageRecords = records.slice(start, start + itemsPerPage)
+  const analysingReportIds = useMemo(() => {
+    return pageRecords
+      .filter((record) => {
+        return getReportCardType(record.intvStatus, record.report?.reportStatus) === 'analysingCard'
+      })
+      .map((record) => record.report?.reportId)
+      .filter((reportId): reportId is number => reportId != null)
+  }, [pageRecords])
 
-  // 수정 전:
+  usePageVisibilityTracker(analysingReportIds.length > 0, analysingReportIds)
+
   if (records.length === 0) {
-    // 수정 후: 목데이터를 기준으로 빈 화면인지 체크하도록 변경
-    // if (pageRecords.length === 0) {
     if (search) {
       return (
         <motion.div
