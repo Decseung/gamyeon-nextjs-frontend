@@ -60,7 +60,14 @@ export const trackEvent = (
 ) => {
   if (!isBrowser()) return
 
-  sendGAEvent('event', eventName, { ...(params || {}), ...(isDev && { debug_mode: true }) })
+  if (isDev) {
+    console.log(`[GA4-DEV-SKIP] event: ${eventName}`, params || {})
+    if (options?.clarity) {
+      trackClarityEvent(eventName)
+    }
+    return
+  }
+  sendGAEvent('event', eventName, params || {})
 
   if (options?.clarity) {
     trackClarityEvent(eventName)
@@ -68,6 +75,6 @@ export const trackEvent = (
 }
 
 // 퍼널 함수에는 더 엄격하게 FunnelStep 타입만 허용
-export const trackFunnel = (stepName: FunnelStep) => {
-  trackEvent(stepName, { category: 'funnel' })
-}
+// export const trackFunnel = (stepName: FunnelStep) => {
+//   trackEvent(stepName, { category: 'funnel' })
+// }
