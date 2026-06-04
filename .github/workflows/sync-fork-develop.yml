@@ -8,6 +8,7 @@ on:
 
 jobs:
   sync-fork:
+    if: github.repository == 'team-gamyeon/gamyeon-nextjs-frontend'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger fork sync
