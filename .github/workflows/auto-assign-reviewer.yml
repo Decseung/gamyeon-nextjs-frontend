@@ -1,14 +1,9 @@
-name: Auto Assign Reviewers
+addReviewers: true
+addAssignees: false
 
-on:
-  pull_request:
-    types: [opened, ready_for_review]
+reviewers:
+  - joyh7680
+  - christina-ahn
+  - Decseung
 
-jobs:
-  assign-reviewers:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Assign reviewers
-        uses: kentaro-m/auto-assign-actions@v2.0.0
-        with:
-          repo-token: '${{ secrets.GITHUB_TOKEN }}'
+numberOfReviewers: 2
