@@ -1,9 +1,0 @@
-addReviewers: true
-addAssignees: false
-
-reviewers:
-  - joyh7680
-  - christina-ahn
-  - Decseung
-
-numberOfReviewers: 2
