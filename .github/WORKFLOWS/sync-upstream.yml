@@ -1,0 +1,28 @@
+name: Sync from upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to sync'
+        required: true
+        default: 'develop'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Sync upstream branch
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git remote add upstream https://github.com/team-gamyeon/gamyeon-nextjs-frontend.git
+          git fetch upstream ${{ inputs.branch }}
+          git merge upstream/${{ inputs.branch }} --ff-only
+          git push origin ${{ inputs.branch }}
