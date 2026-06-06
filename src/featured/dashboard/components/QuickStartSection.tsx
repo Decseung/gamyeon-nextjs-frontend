@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Play, History, RotateCw } from 'lucide-react'
+import { Play, History, RotateCw, ArrowRight } from 'lucide-react'
 import { QuickStartCard } from '@/featured/dashboard/components/QuickStartCard'
+import { ResumeInterviewModal } from '@/featured/dashboard/components/ResumeInterviewModal'
+import { Card, CardContent } from '@/shared/ui/card'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -13,13 +16,8 @@ const fadeUp = {
   }),
 }
 
-interface QuickStartSectionProps {
-  restartIntvId?: number
-}
-
-export function QuickStartSection({ restartIntvId }: QuickStartSectionProps = {}) {
-  // TODO: 실제 유저 상태(진행 중인 면접 여부)에 따라 이 값을 동적으로 설정해야 합니다.
-  const hasInProgressInterview = !!restartIntvId
+export function QuickStartSection() {
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false)
 
   return (
     <div>
@@ -73,24 +71,26 @@ export function QuickStartSection({ restartIntvId }: QuickStartSectionProps = {}
           custom={3}
           className="flex-1"
         >
-          <QuickStartCard
-            title="이어하기"
-            description={
-              hasInProgressInterview
-                ? '진행중인 면접이 있습니다. 이어서 진행해 보세요'
-                : '현재 진행 중인 면접이 없습니다.'
-            }
-            icon={RotateCw}
-            iconStyle="bg-linear-to-br from-green-100 to-emerald-100 text-green-600 group-hover:from-green-200 group-hover:to-emerald-200"
-            iconColorStyle="text-green-600"
-            href={restartIntvId ? `/interview?restart=true&id=${restartIntvId}` : '/interview'}
-            buttonText="이어서 면접보기"
-            isDisabled={!hasInProgressInterview}
-            buttonTextStyle="text-green-600"
-            hoverBorderStyle="hover:border-green-300 hover:shadow-green-600/5"
-          />
+          <div className="h-full w-full cursor-pointer" onClick={() => setIsResumeModalOpen(true)}>
+            <Card className="group border-border/50 flex h-full flex-col transition-all hover:border-green-300 hover:shadow-md hover:shadow-green-600/5">
+              <CardContent className="flex flex-1 flex-col p-5">
+                <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-green-100 to-emerald-100 transition-colors group-hover:from-green-200 group-hover:to-emerald-200">
+                  <RotateCw className="h-5 w-5 text-green-600" />
+                </div>
+                <h3 className="mb-1 font-semibold">이어하기</h3>
+                <p className="text-muted-foreground flex-1 text-xs leading-relaxed">
+                  진행중인 면접이 있습니다. 이어서 진행해 보세요
+                </p>
+                <div className="mt-4 flex shrink-0 items-center gap-1 text-xs font-medium text-green-600">
+                  이어서 면접보기 <ArrowRight className="h-3 w-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
       </div>
+
+      <ResumeInterviewModal open={isResumeModalOpen} onClose={() => setIsResumeModalOpen(false)} />
     </div>
   )
 }
