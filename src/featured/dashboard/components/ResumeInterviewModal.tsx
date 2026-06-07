@@ -16,11 +16,7 @@ interface PausedInterview {
   updatedAt: string
 }
 
-const MOCK_PAUSED_INTERVIEWS: PausedInterview[] = [
-  { intvId: 1, intvTitle: '카카오 백엔드 면접', updatedAt: '2026-06-05T14:30:00' },
-  { intvId: 2, intvTitle: '네이버 프론트엔드 면접', updatedAt: '2026-06-04T10:15:00' },
-  { intvId: 3, intvTitle: '토스 풀스택 면접', updatedAt: '2026-06-03T18:00:00' },
-]
+const pausedInterviews: PausedInterview[] = []
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('ko-KR', {
@@ -58,7 +54,7 @@ export function ResumeInterviewModal({ open, onClose }: ResumeInterviewModalProp
           <DialogDescription>일시 중단된 면접 목록입니다.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-2">
-          {MOCK_PAUSED_INTERVIEWS.map((item) => (
+          {pausedInterviews.map((item) => (
             <div
               key={item.intvId}
               className="border-border/50 hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors"

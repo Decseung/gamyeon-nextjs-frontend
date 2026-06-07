@@ -12,7 +12,7 @@ export default async function DashboardPage() {
     <>
       <DashboardHeader />
       <div className="space-y-6 px-8 py-4">
-        <QuickStartSection />
+        <QuickStartSection records={initialRecords} />
         <DashboardLiveSection initialRecords={initialRecords} />
       </div>
     </>
