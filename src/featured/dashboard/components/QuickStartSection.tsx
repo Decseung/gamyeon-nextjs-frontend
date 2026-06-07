@@ -5,7 +5,9 @@ import { motion } from 'framer-motion'
 import { Play, History, RotateCw, ArrowRight } from 'lucide-react'
 import { QuickStartCard } from '@/featured/dashboard/components/QuickStartCard'
 import { ResumeInterviewModal } from '@/featured/dashboard/components/ResumeInterviewModal'
+import { InterviewStartGuideModal } from '@/featured/dashboard/components/InterviewStartGuideModal'
 import { Card, CardContent } from '@/shared/ui/card'
+import { InterviewReportItem } from '@/featured/history/types'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -16,8 +18,22 @@ const fadeUp = {
   }),
 }
 
-export function QuickStartSection() {
+interface QuickStartSectionProps {
+  records: InterviewReportItem[]
+}
+
+export function QuickStartSection({ records }: QuickStartSectionProps) {
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false)
+  const [isStartGuideModalOpen, setIsStartGuideModalOpen] = useState(false)
+
+  const pausedInterviewCount = records.filter((record) => record.intvStatus === 'PAUSED').length
+  const hasPausedInterview = pausedInterviewCount > 0
+
+  const handleStartClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!hasPausedInterview) return
+    event.preventDefault()
+    setIsStartGuideModalOpen(true)
+  }
 
   return (
     <div>
@@ -41,6 +57,7 @@ export function QuickStartSection() {
             href="/interview"
             buttonText="지금 시작"
             isRecommended={true}
+            onClick={handleStartClick}
           />
         </motion.div>
 
@@ -71,17 +88,47 @@ export function QuickStartSection() {
           custom={3}
           className="flex-1"
         >
-          <div className="h-full w-full cursor-pointer" onClick={() => setIsResumeModalOpen(true)}>
-            <Card className="group border-border/50 flex h-full flex-col transition-all hover:border-green-300 hover:shadow-md hover:shadow-green-600/5">
+          <div
+            className={`h-full w-full ${hasPausedInterview ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+            aria-disabled={!hasPausedInterview}
+            onClick={() => hasPausedInterview && setIsResumeModalOpen(true)}
+          >
+            <Card
+              className={`group flex h-full flex-col transition-all ${
+                hasPausedInterview
+                  ? 'border-border/50 hover:border-green-300 hover:shadow-md hover:shadow-green-600/5'
+                  : 'border-border/50 bg-slate-50'
+              }`}
+            >
               <CardContent className="flex flex-1 flex-col p-5">
-                <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-green-100 to-emerald-100 transition-colors group-hover:from-green-200 group-hover:to-emerald-200">
-                  <RotateCw className="h-5 w-5 text-green-600" />
+                <div
+                  className={`mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                    hasPausedInterview
+                      ? 'bg-linear-to-br from-green-100 to-emerald-100 group-hover:from-green-200 group-hover:to-emerald-200'
+                      : 'bg-slate-200/50'
+                  }`}
+                >
+                  <RotateCw
+                    className={`h-5 w-5 ${hasPausedInterview ? 'text-green-600' : 'text-slate-400'}`}
+                  />
                 </div>
-                <h3 className="mb-1 font-semibold">이어하기</h3>
-                <p className="text-muted-foreground flex-1 text-xs leading-relaxed">
-                  진행중인 면접이 있습니다. 이어서 진행해 보세요
+                <h3 className={`mb-1 font-semibold ${hasPausedInterview ? '' : 'text-slate-400'}`}>
+                  이어하기
+                </h3>
+                <p
+                  className={`flex-1 text-xs leading-relaxed ${
+                    hasPausedInterview ? 'text-muted-foreground' : 'text-slate-400 opacity-60'
+                  }`}
+                >
+                  {hasPausedInterview
+                    ? `진행중인 면접이 ${pausedInterviewCount}개 있습니다. 이어서 진행해 보세요`
+                    : '진행중인 면접이 없습니다'}
                 </p>
-                <div className="mt-4 flex shrink-0 items-center gap-1 text-xs font-medium text-green-600">
+                <div
+                  className={`mt-4 flex shrink-0 items-center gap-1 text-xs font-medium ${
+                    hasPausedInterview ? 'text-green-600' : 'text-slate-400'
+                  }`}
+                >
                   이어서 면접보기 <ArrowRight className="h-3 w-3" />
                 </div>
               </CardContent>
@@ -91,6 +138,11 @@ export function QuickStartSection() {
       </div>
 
       <ResumeInterviewModal open={isResumeModalOpen} onClose={() => setIsResumeModalOpen(false)} />
+      <InterviewStartGuideModal
+        open={isStartGuideModalOpen}
+        onClose={() => setIsStartGuideModalOpen(false)}
+        onResume={() => setIsResumeModalOpen(true)}
+      />
     </div>
   )
 }

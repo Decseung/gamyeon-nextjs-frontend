@@ -16,7 +16,7 @@ export interface QuickStartCardProps {
   hoverBorderStyle?: string
   isRecommended?: boolean
   isDisabled?: boolean
-  onClick?: () => void
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void
 }
 
 export function QuickStartCard({
