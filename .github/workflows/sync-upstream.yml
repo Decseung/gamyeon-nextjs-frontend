@@ -11,6 +11,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,5 +26,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git remote add upstream https://github.com/team-gamyeon/gamyeon-nextjs-frontend.git
           git fetch upstream ${{ inputs.branch }}
-          git reset --hard upstream/${{ inputs.branch }}
-          git push --force-with-lease origin ${{ inputs.branch }}
+          git merge upstream/${{ inputs.branch }} --ff-only
+          git push origin ${{ inputs.branch }}
