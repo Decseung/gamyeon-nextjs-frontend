@@ -45,12 +45,16 @@ const isDev = process.env.NODE_ENV === 'development'
 export const trackClarityEvent = (eventName: FunnelStep | string) => {
   if (!isBrowser()) return
 
+  if (isDev) {
+    console.info(`[Clarity-DEV-SKIP] event: ${eventName}`)
+    return
+  }
+
   try {
     clarity.event(eventName)
   } catch (error) {
-    if (isDev) console.warn('[Clarity] event failed:', eventName, error)
+    console.warn('[Clarity] event failed:', eventName, error)
   }
-  if (isDev) console.info(`[Clarity] event: ${eventName}`)
 }
 
 export const trackEvent = (
