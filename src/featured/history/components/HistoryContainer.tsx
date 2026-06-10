@@ -120,6 +120,7 @@ function FlipCard({ record }: FlipCardProps) {
       trackEvent('report_waiting_early_exit', {
         category: 'ai_report',
         report_id: reportId,
+        //  “초단기 이탈이 발생하기까지 실제로 얼마나 기다렸는지”를 보는 값
         elapsed_ms: elapsedMs,
         reason: 'component_unmount',
       })
