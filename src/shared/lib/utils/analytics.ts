@@ -11,6 +11,7 @@ type FunnelStep =
   | 'report_waiting_hidden' // 리포트 대기 중 화면 비활성화
   | 'report_waiting_session' // 리포트 생성 대기 중 전체 세션
   | 'report_waiting_rage_click' // 리포트 생성 대기 중 분노의 클릭
+  | 'report_waiting_early_exit' // 리포트 대기 중 초단기 이탈
 
   // 2. 파일 업로드 및 면접 시작 플로우 점검
   | 'open_interview_modal' // 모달창 최초 진입 (1단계)
