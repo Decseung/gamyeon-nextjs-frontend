@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Card } from '@/shared/ui/card'
@@ -38,12 +38,22 @@ function FlipCard({ record }: FlipCardProps) {
   const cardType = getReportCardType(record.intvStatus, record.report?.reportStatus)
 
   const prevCardType = useRef<string | null>(null)
+  const latestCardTypeRef = useRef<string | null>(cardType)
+  const analysingMountedAtRef = useRef<number | null>(null)
+  const reportCompletedRef = useRef(false)
+  const hiddenOccurredRef = useRef(false)
+  const earlyExitSentRef = useRef(false)
 
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
 
-  // AI 리포트 대기 마찰률: 리포트 단위 기준
+  // AI 리포트 대기 지표: 리포트 단위 기준
   const reportId = record.report?.reportId
+
+  useLayoutEffect(() => {
+    // analysingCard cleanup보다 먼저 최신 카드 상태를 기록해, 완료 전환을 early_exit로 오탐하지 않게 한다.
+    latestCardTypeRef.current = cardType
+  }, [cardType])
 
   useEffect(() => {
     if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard' && reportId) {
@@ -54,7 +64,7 @@ function FlipCard({ record }: FlipCardProps) {
 
       const waitingSessionKey = `report_waiting_session:${reportId}`
 
-      // 마찰률의 분모 이벤트, 같은 리포트 대기 건은 세션 내 1회만 잡음
+      // 대기 지표의 분모 이벤트, 같은 리포트 대기 건은 세션 내 1회만 잡음
       if (!sessionStorage.getItem(waitingSessionKey)) {
         sessionStorage.setItem(waitingSessionKey, 'true')
 
@@ -68,6 +78,9 @@ function FlipCard({ record }: FlipCardProps) {
     }
 
     if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
+      // 완료로 인한 카드 제거는 초단기 이탈에서 제외한다.
+      reportCompletedRef.current = true
+
       trackEvent('report_gen_complete', {
         category: 'ai_report',
         report_id: reportId,
@@ -76,6 +89,59 @@ function FlipCard({ record }: FlipCardProps) {
 
     prevCardType.current = cardType
   }, [cardType, reportId])
+
+  useEffect(() => {
+    if (!isAnalysing || !reportId) return
+
+    // AnalysingCard 진입 시점을 기준으로 10초 이내 이탈 여부를 판단한다.
+    analysingMountedAtRef.current = Date.now()
+    reportCompletedRef.current = false
+    hiddenOccurredRef.current = document.hidden
+    earlyExitSentRef.current = false
+
+    return () => {
+      const mountedAt = analysingMountedAtRef.current
+      analysingMountedAtRef.current = null
+
+      if (!mountedAt) return
+      if (earlyExitSentRef.current) return
+      if (reportCompletedRef.current || latestCardTypeRef.current === 'completedCard') return
+      if (hiddenOccurredRef.current) return
+
+      const elapsedMs = Date.now() - mountedAt
+      if (elapsedMs > 10000) return
+
+      const earlyExitKey = `report_waiting_early_exit:${reportId}`
+      if (sessionStorage.getItem(earlyExitKey)) return
+
+      sessionStorage.setItem(earlyExitKey, 'true')
+      earlyExitSentRef.current = true
+
+      trackEvent('report_waiting_early_exit', {
+        category: 'ai_report',
+        report_id: reportId,
+        elapsed_ms: elapsedMs,
+        reason: 'component_unmount',
+      })
+    }
+  }, [isAnalysing, reportId])
+
+  useEffect(() => {
+    if (!isAnalysing || !reportId) return
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) return
+
+      // 화면 비활성화 행동은 report_waiting_hidden에서 별도 해석하므로 early_exit에서는 제외한다.
+      hiddenOccurredRef.current = true
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isAnalysing, reportId])
 
   const handleRageClick = useCallback(() => {
     if (!isAnalysing || !reportId) return
