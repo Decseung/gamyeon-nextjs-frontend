@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { SortBy, InterviewReportItem } from '../types'
+import { getReportCardType } from '../constants'
 
 export function useHistoryFilter(records: InterviewReportItem[] = []) {
   const [search, setSearch] = useState('')
@@ -9,11 +10,13 @@ export function useHistoryFilter(records: InterviewReportItem[] = []) {
   const filtered = useMemo(() => {
     return records
       .filter((record) => {
+        const cardType = getReportCardType(record.intvStatus, record.report?.reportStatus)
+        if (!cardType) return false
+
         // 검색어가 없으면 모두 보여줌
         if (!search) return true
 
-        // 1. 기존 position -> intvTitle (대소문자 구분 없이 검색되도록 toLowerCase 추가)
-        return record.intvTitle.toLowerCase().includes(search.toLowerCase())
+        return record.title.toLowerCase().includes(search.toLowerCase())
       })
       .sort((a, b) => {
         // 2. 기존 score -> report.totalScore

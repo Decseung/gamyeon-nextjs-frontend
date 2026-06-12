@@ -30,7 +30,7 @@ export function FailedCard({ record }: FailedCardProps) {
           <div>
             {/* 수정 부분: CompletedCard와 동일하게 라인 클램프 및 높이 고정 적용 */}
             <h3 className="mb-0.5 line-clamp-2 h-[2.5em] text-[11px] leading-tight font-bold text-gray-900 @[180px]:text-xs @[220px]:text-sm @[280px]:mb-1 @[280px]:text-base">
-              {record.intvTitle}
+              {record.title}
             </h3>
           </div>
 

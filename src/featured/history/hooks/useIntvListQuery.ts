@@ -2,18 +2,18 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/featured/auth/store'
-import { getReportListAction } from '@/featured/history/actions/history.action'
+import { getIntvListAction } from '@/featured/history/actions/history.action'
 
 const POLLING_INTERVAL_MS = 30000
 
-export function useReportListQuery() {
+export function useIntvListQuery() {
   const { isLoggedIn } = useAuthStore()
 
   return useQuery({
-    queryKey: ['reportList'],
+    queryKey: ['intvList'],
     queryFn: async () => {
-      const response = await getReportListAction()
-      if (!response.success) throw new Error('리포트 목록 조회 실패')
+      const response = await getIntvListAction()
+      if (!response.success) throw new Error('면접 목록 조회 실패')
       return response.data ?? []
     },
     enabled: isLoggedIn,

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/shared/ui/card'
-import { ChevronRight, Inbox, Loader2 } from 'lucide-react'
+import { ChevronRight, Inbox, Loader2, RotateCw } from 'lucide-react'
 import { InterviewReportItem } from '@/featured/history/types'
 import { formatDateDot } from '@/shared/lib/utils/date'
 import { getScoreConfig } from '@/featured/report/constants'
@@ -32,6 +32,7 @@ export interface RecentHistorySectionProps {
 
 export function RecentHistorySection({ records = [] }: RecentHistorySectionProps) {
   const displayRecords = [...records]
+    .filter((r) => r.intvStatus === 'FINISHED' || r.intvStatus === 'PAUSED')
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 3)
   const isEmpty = displayRecords.length === 0
@@ -79,20 +80,32 @@ export function RecentHistorySection({ records = [] }: RecentHistorySectionProps
               const reportStatus = item.report?.reportStatus
               const isAnalyzing = reportStatus === 'IN_PROGRESS'
               const hasScore = score !== null && score !== undefined
+              const isPaused = item.intvStatus === 'PAUSED'
 
               return (
                 <Link
                   key={item.intvId}
-                  href={`/report/${item.intvId}`}
-                  className="flex h-18.25 flex-col justify-center"
+                  href={
+                    isPaused
+                      ? `/interview?restart=true&id=${item.intvId}`
+                      : `/report/${item.intvId}`
+                  }
+                  onClick={(e) => { if (isAnalyzing) e.preventDefault() }}
+                  className={`flex h-18.25 flex-col justify-center${isAnalyzing ? ' pointer-events-none opacity-60' : ''}`}
                 >
                   <div className="hover:bg-muted/40 flex h-full w-full items-center gap-4 px-5 transition-colors">
                     <div
                       className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl text-sm font-bold ${
-                        hasScore ? getScoreConfig(score).style : 'bg-slate-100 text-slate-500'
+                        isPaused
+                          ? 'bg-green-50 text-green-600'
+                          : hasScore
+                            ? getScoreConfig(score).style
+                            : 'bg-slate-100 text-slate-500'
                       }`}
                     >
-                      {isAnalyzing ? (
+                      {isPaused ? (
+                        <RotateCw className="h-4 w-4" />
+                      ) : isAnalyzing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : hasScore ? (
                         score
@@ -101,8 +114,10 @@ export function RecentHistorySection({ records = [] }: RecentHistorySectionProps
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{item.intvTitle}</p>
-                      {isAnalyzing ? (
+                      <p className="truncate text-sm font-medium">{item.title}</p>
+                      {isPaused ? (
+                        <p className="text-xs text-green-600">일시정지됨</p>
+                      ) : isAnalyzing ? (
                         <p className="text-xs text-amber-500">AI 리포트 분석 중...</p>
                       ) : (
                         <p className="text-muted-foreground text-xs">

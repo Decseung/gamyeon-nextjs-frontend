@@ -15,6 +15,9 @@ import {
   LayoutDashboard,
   Video,
 } from 'lucide-react'
+import { InterviewStartGuideModal } from '@/featured/dashboard/components/InterviewStartGuideModal'
+import { ResumeInterviewModal } from '@/featured/dashboard/components/ResumeInterviewModal'
+import { InterviewReportItem } from '@/featured/history/types'
 
 const navItems = [
   { icon: House, label: '가면 AI', href: '/' },
@@ -24,9 +27,24 @@ const navItems = [
   { icon: ClipboardList, label: '면접 기록', href: '/history' },
 ]
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  pausedRecords: InterviewReportItem[]
+}
+
+export function DashboardSidebar({ pausedRecords }: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [isStartGuideModalOpen, setIsStartGuideModalOpen] = useState(false)
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false)
   const pathname = usePathname()
+
+  const hasPausedInterview = pausedRecords.length > 0
+
+  const handleInterviewClick = (_event: React.MouseEvent<HTMLAnchorElement>) => {
+    // TODO: 삭제 API 구현 후 팝업 활성화
+    // if (!hasPausedInterview) return
+    // _event.preventDefault()
+    // setIsStartGuideModalOpen(true)
+  }
 
   return (
     <div className="relative shrink-0">
@@ -72,10 +90,12 @@ export function DashboardSidebar() {
         <nav className="flex-1 space-y-0.5 px-2 py-3">
           {navItems.map((item) => {
             const active = pathname === item.href
+            const isInterviewItem = item.href === '/interview'
 
             const linkEl = (
               <Link
                 href={item.href}
+                onClick={isInterviewItem ? handleInterviewClick : undefined}
                 className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? 'bg-primary/10 text-primary'
@@ -123,6 +143,18 @@ export function DashboardSidebar() {
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </button>
+
+      <InterviewStartGuideModal
+        open={isStartGuideModalOpen}
+        onClose={() => setIsStartGuideModalOpen(false)}
+        onResume={() => setIsResumeModalOpen(true)}
+        pausedRecords={pausedRecords}
+      />
+      <ResumeInterviewModal
+        open={isResumeModalOpen}
+        onClose={() => setIsResumeModalOpen(false)}
+        pausedRecords={pausedRecords}
+      />
     </div>
   )
 }
