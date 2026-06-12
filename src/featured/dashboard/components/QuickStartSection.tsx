@@ -26,13 +26,15 @@ export function QuickStartSection({ records }: QuickStartSectionProps) {
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false)
   const [isStartGuideModalOpen, setIsStartGuideModalOpen] = useState(false)
 
-  const pausedInterviewCount = records.filter((record) => record.intvStatus === 'PAUSED').length
+  const pausedRecords = records.filter((record) => record.intvStatus === 'PAUSED')
+  const pausedInterviewCount = pausedRecords.length
   const hasPausedInterview = pausedInterviewCount > 0
 
-  const handleStartClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!hasPausedInterview) return
-    event.preventDefault()
-    setIsStartGuideModalOpen(true)
+  const handleStartClick = (_event: React.MouseEvent<HTMLAnchorElement>) => {
+    // TODO: 삭제 API 구현 후 팝업 활성화
+    // if (!hasPausedInterview) return
+    // _event.preventDefault()
+    // setIsStartGuideModalOpen(true)
   }
 
   return (
@@ -137,11 +139,16 @@ export function QuickStartSection({ records }: QuickStartSectionProps) {
         </motion.div>
       </div>
 
-      <ResumeInterviewModal open={isResumeModalOpen} onClose={() => setIsResumeModalOpen(false)} />
+      <ResumeInterviewModal
+        open={isResumeModalOpen}
+        onClose={() => setIsResumeModalOpen(false)}
+        pausedRecords={pausedRecords}
+      />
       <InterviewStartGuideModal
         open={isStartGuideModalOpen}
         onClose={() => setIsStartGuideModalOpen(false)}
         onResume={() => setIsResumeModalOpen(true)}
+        pausedRecords={pausedRecords}
       />
     </div>
   )

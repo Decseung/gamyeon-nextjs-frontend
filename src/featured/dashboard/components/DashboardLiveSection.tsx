@@ -1,6 +1,6 @@
 'use client'
 
-import { useReportListQuery } from '@/featured/history/hooks/useReportListQuery'
+import { useIntvListQuery } from '@/featured/history/hooks/useIntvListQuery'
 import { InterviewReportItem } from '@/featured/history/types'
 import { StatusSection } from './StatusSection'
 import { RecentHistorySection } from './RecentHistorySection'
@@ -11,7 +11,7 @@ interface DashboardLiveSectionProps {
 }
 
 export function DashboardLiveSection({ initialRecords }: DashboardLiveSectionProps) {
-  const { data: records = initialRecords } = useReportListQuery()
+  const { data: records = initialRecords } = useIntvListQuery()
 
   return (
     <>

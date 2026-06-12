@@ -7,7 +7,7 @@ import { Separator } from '@/shared/ui/separator'
 import { Award, Clock, MessageSquare, ShieldCheck } from 'lucide-react'
 import type { AiConfidenceLevel } from '@/featured/report/types'
 import { getScoreConfig, AI_CONFIDENCE_STYLE } from '@/featured/report/constants'
-import { formatDuration } from '@/shared/lib/utils/date'
+import { formatDurationMs } from '@/shared/lib/utils/date'
 
 interface ScoreSummaryCardProps {
   overallScore: number
@@ -99,7 +99,7 @@ export function ScoreSummaryCard({
               <Clock className="h-4 w-4" />
               평균 답변 시간
             </span>
-            <span className="font-medium">{formatDuration(avgAnswerDurationMs)}</span>
+            <span className="font-medium">{formatDurationMs(avgAnswerDurationMs)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground flex items-center gap-2">

@@ -31,7 +31,7 @@ function CompletedCardFront({ record }: CompletedCardProps) {
           <div>
             {/* 수정 부분: 높이(h)를 고정하여 1줄일 때나 2줄일 때나 레이아웃이 동일하게 유지되도록 설정, 2줄 이상은 말줄임 처리 */}
             <h3 className="mb-0.5 line-clamp-2 h-[2.5em] text-[11px] leading-tight font-bold text-gray-900 @[180px]:text-xs @[220px]:text-sm @[280px]:mb-1 @[280px]:text-base">
-              {record.intvTitle}
+              {record.title}
             </h3>
             <p className="text-[9px] text-gray-500 @[180px]:text-[10px] @[220px]:text-xs">
               {record.report?.answeredCount}개 질문
@@ -44,7 +44,7 @@ function CompletedCardFront({ record }: CompletedCardProps) {
             </div>
             <div className="flex items-center gap-1 text-[10px] text-gray-600 @[180px]:gap-1.5 @[180px]:text-[11px] @[220px]:gap-2 @[220px]:text-xs @[280px]:text-sm">
               <Clock className="h-2.5 w-2.5 shrink-0 text-blue-500 @[180px]:h-3 @[180px]:w-3 @[220px]:h-3.5 @[220px]:w-3.5 @[280px]:h-4 @[280px]:w-4" />
-              <span>{formatDuration(record.durationMs)}</span>
+              <span>{formatDuration(record.durationSeconds)}</span>
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@ function CompletedCardBack({ record }: CompletedCardProps) {
               잘한 점
             </p>
           </div>
-          <ul className="overflow-hidden space-y-0.5 @[180px]:space-y-1 @[220px]:space-y-1.5">
+          <ul className="space-y-0.5 overflow-hidden @[180px]:space-y-1 @[220px]:space-y-1.5">
             {strengths.length > 0 ? (
               strengths.map((strength: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-1 @[180px]:gap-1.5">
@@ -97,7 +97,7 @@ function CompletedCardBack({ record }: CompletedCardProps) {
               개선점
             </p>
           </div>
-          <ul className="overflow-hidden space-y-0.5 @[180px]:space-y-1 @[220px]:space-y-1.5">
+          <ul className="space-y-0.5 overflow-hidden @[180px]:space-y-1 @[220px]:space-y-1.5">
             {weaknesses.length > 0 ? (
               weaknesses.map((weakness: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-1 @[180px]:gap-1.5">

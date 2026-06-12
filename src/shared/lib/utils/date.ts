@@ -66,19 +66,37 @@ export const checkIsRecent = (dateString: string): boolean => {
 }
 
 /**
- * 밀리초(ms)를 "M분 S초" 또는 "M분" 형식으로 변환합니다.
- * @param ms 밀리초 단위 숫자
- * @returns 예: 850000 -> "14분 10초", 60000 -> "1분"
+ * 초(seconds)를 "M분 S초" 또는 "M분" 형식으로 변환합니다.
+ * @param seconds 초 단위 숫자
+ * @returns 예: 850 -> "14분 10초", 60 -> "1분"
  */
-export const formatDuration = (ms: number | null): string => {
-  if (!ms) return '0분'
+/**
+ * ISO 날짜 문자열을 "YYYY년 M월 D일 HH:MM" 형식으로 변환합니다.
+ * @param dateString ISO 형식의 날짜 문자열
+ * @returns 예: "2026년 6월 12일 오전 10:30"
+ */
+export const formatDateTimeKorean = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
-  const totalSeconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
+export const formatDuration = (seconds: number | null): string => {
+  if (seconds === null || seconds === 0) return '0분'
 
-  if (seconds === 0) {
-    return `${minutes}분`
-  }
-  return `${minutes}분 ${seconds}초`
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+
+  if (minutes === 0) return `${secs}초`
+  if (secs === 0) return `${minutes}분`
+  return `${minutes}분 ${secs}초`
+}
+
+export const formatDurationMs = (ms: number | null): string => {
+  if (ms === null || ms === 0) return '0분'
+  return formatDuration(Math.round(ms / 1000))
 }

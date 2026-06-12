@@ -130,7 +130,9 @@ function FlipCard({ record }: FlipCardProps) {
       <CardContainer isHovered={isHovered}>
         <Card className="absolute inset-0 flex flex-col overflow-hidden backface-hidden">
           {cardType === 'completedCard' && <CompletedCardFront record={record} />}
-          {cardType === 'pendingCard' && <PendingCard intvId={record.intvId} />}
+          {cardType === 'pendingCard' && (
+            <PendingCard intvId={record.intvId} title={record.title} />
+          )}
           {cardType === 'analysingCard' && <AnalysingCard />}
           {cardType === 'failedCard' && <FailedCard record={record} />}
         </Card>
