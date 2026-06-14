@@ -120,7 +120,7 @@ export interface GetInterviewQuestionsResponse {
 
 export interface IssueVideoPresignedUrlRequest {
   originalFileName: string
-  contentType: string // 테스트 후 타입 좁히기 필요
+  contentType: string
   fileSizeBytes: number
 }
 
@@ -155,4 +155,43 @@ export interface uploadAnswer {
   videoBlob: Blob
   questionSetId: number
   interviewId: number
+}
+
+export type AnswerStatus =
+  | 'UPLOADED'
+  | 'STT_PENDING'
+  | 'STT_PROCESSING'
+  | 'STT_COMPLETED'
+  | 'STT_FAILED'
+  | null
+
+export type InterviewStatus = 'READY' | 'IN_PROGRESS' | 'PAUSED' | 'FINISHED'
+
+export interface Question {
+  questionSetId: number
+  questionOrder: number
+  content: string
+  answered: boolean
+  answerId: number | null
+  answerStatus: AnswerStatus
+}
+
+export interface RestartContextInterviewData {
+  intvId: number
+  status: InterviewStatus
+  totalQuestionCount: number
+  answeredCount: number
+  completed: boolean
+  nextQuestionSetId: number | null
+  nextQuestionOrder: number | null
+  nextQuestionContent: string | null
+  questions: Question[]
+}
+
+export interface RestartContextInterviewResponse {
+  success: boolean
+  code: string
+  message: string
+  data: RestartContextInterviewData
+  errors: unknown | null
 }
