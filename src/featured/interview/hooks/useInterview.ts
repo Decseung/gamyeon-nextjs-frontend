@@ -100,7 +100,7 @@ export function useInterview() {
       setInterviewId(config.interviewId)
     }
     setInterviewQuestions(config.questions ?? [])
-    setCurrentQuestion(restartContext?.answeredCount ?? 0)
+    setCurrentQuestion(0)
     setShowSetup(false)
     setTypingKey((prev) => prev + 1)
     setQuestionRevealed(false)
