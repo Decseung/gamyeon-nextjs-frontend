@@ -1,4 +1,5 @@
-import { ApiResponse, PaginatedResponse, serverApi } from '@/shared/lib/api'
+import { ApiResponse, serverApi } from '@/shared/lib/api'
+import { PaginatedResponse } from '@/shared/lib/api/types'
 import { InterviewReportItem } from '../types'
 
 export async function getIntvList(): Promise<ApiResponse<InterviewReportItem[]>> {
