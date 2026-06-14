@@ -30,7 +30,6 @@ export function FlipCard({ record }: FlipCardProps) {
 
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
-  const isPending = cardType === 'pendingCard'
 
   // AI 리포트 대기 마찰률: 리포트 단위 기준
   const reportId = record.report?.reportId
@@ -99,9 +98,6 @@ export function FlipCard({ record }: FlipCardProps) {
 
     if (isAnalysing) {
       registerRageClick()
-    }
-
-    if (isPending) {
     }
   }
 
