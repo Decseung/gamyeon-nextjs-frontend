@@ -176,7 +176,7 @@ export interface Question {
   answerStatus: AnswerStatus
 }
 
-export interface RestartContextInterviewData {
+export interface RestartContextInterviewResponse {
   intvId: number
   status: InterviewStatus
   totalQuestionCount: number
@@ -186,12 +186,4 @@ export interface RestartContextInterviewData {
   nextQuestionOrder: number | null
   nextQuestionContent: string | null
   questions: Question[]
-}
-
-export interface RestartContextInterviewResponse {
-  success: boolean
-  code: string
-  message: string
-  data: RestartContextInterviewData
-  errors: unknown | null
 }
