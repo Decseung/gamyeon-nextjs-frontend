@@ -15,6 +15,7 @@ import {
   IssueVideoPresignedUrlResponse,
   AnswerAnalysisResponse,
   InterviewBatchPayload,
+  RestartContextInterviewResponse,
 } from '../types'
 import {
   completeFileUpload,
@@ -27,6 +28,7 @@ import {
   issueVideoPresignedUrl,
   pauseInterview,
   requestAnswerAnalysis,
+  restartContextInterview,
   restartInterview,
   sendGazeStats,
   startInterview,
@@ -140,7 +142,14 @@ export async function pauseInterviewAction(intvId: number): Promise<ApiResponse<
   return withAction(() => pauseInterview(intvId))
 }
 
-// 면접 재개
+// 이어하기용 질문 컨텍스트 조회
+export async function restartContextInterviewAction(
+  intvId: number,
+): Promise<ApiResponse<RestartContextInterviewResponse>> {
+  return withAction(() => restartContextInterview(intvId))
+}
+
+// 면접 재개(이어하기)
 export async function restartInterviewAction(intvId: number): Promise<ApiResponse<null>> {
   return withAction(() => restartInterview(intvId))
 }
