@@ -20,6 +20,7 @@ import {
   createInterviewAction,
   generateInterviewQuestionAction,
   issuePresignedUrlAction,
+  restartInterviewAction,
   startInterviewAction,
   updateInterviewTitleAction,
 } from '@/featured/interview/actions/interview.action'
@@ -51,7 +52,9 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
   const [isPollingActive, setIsPollingActive] = useState(false)
 
   const cameraHandler = useCameraHandler()
-  const micPermission = useMicPermission(() => setIsPollingActive(true))
+  const micPermission = useMicPermission(() => {
+    if (!isRestart) setIsPollingActive(true)
+  })
   const micRecorder = useMicRecorder(micPermission.micStreamRef)
 
   const handlePollingComplete = useCallback(() => {
@@ -62,8 +65,12 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
     isPollingActive,
     handlePollingComplete,
   )
+  const activeQuestions =
+    isRestart && session.unansweredQuestions?.length
+      ? session.unansweredQuestions
+      : questions
 
-  const isQuestionsReady = questions && Array.isArray(questions) && questions.length > 0
+  const isQuestionsReady = !!activeQuestions && activeQuestions.length > 0
 
   const { cleanupCamera } = cameraHandler
   const { cleanupMic } = micPermission
@@ -387,7 +394,11 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
                   }
 
                   if (session.interviewId) {
-                    await startInterviewAction(session.interviewId)
+                    if (isRestart) {
+                      await restartInterviewAction(session.interviewId)
+                    } else {
+                      await startInterviewAction(session.interviewId)
+                    }
                   }
 
                   trackEvent('start_interview', { category: 'interview_setup' })
@@ -396,7 +407,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
                     basePose: cameraHandler.basePose,
                     stream: cameraHandler.cameraStream,
                     interviewId: session.interviewId,
-                    questions: questions ?? [],
+                    questions: activeQuestions ?? [],
                   })
                 }}
                 className="cursor-pointer gap-2"
