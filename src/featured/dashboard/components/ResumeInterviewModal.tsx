@@ -42,10 +42,10 @@ export function ResumeInterviewModal({ open, onClose, pausedRecords }: ResumeInt
           {pausedRecords.map((item) => (
             <div
               key={item.intvId}
-              className="border-border/50 hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors"
+              className="group border-border/50 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-all hover:border-green-300 hover:shadow-md hover:shadow-green-600/5"
               onClick={() => handleResume(item.intvId)}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-50">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-green-100 to-emerald-100 transition-colors group-hover:from-green-200 group-hover:to-emerald-200">
                 <RotateCw className="h-4 w-4 text-green-600" />
               </div>
               <div>
