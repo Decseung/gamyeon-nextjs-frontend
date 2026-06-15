@@ -13,13 +13,14 @@ import {
   CompleteVideoFileUploadResponse,
   AnswerAnalysisResponse,
   InterviewBatchPayload,
+  RestartContextInterviewResponse,
 } from '../types'
 
 // 면접 생성(제목 추가)
 export async function createInterview(
   title: string,
 ): Promise<ApiResponse<CreateInterviewResponse>> {
-  return await serverApi.post<CreateInterviewResponse>('/api/v1/intvs', {
+  return await serverApi.post('/api/v1/intvs', {
     title,
   })
 }
@@ -84,7 +85,6 @@ export async function completeVideoFileUpload(
   intvId: number,
   video: VideoInfo,
 ): Promise<ApiResponse<CompleteVideoFileUploadResponse>> {
-  console.log('페이로드:', questionSetId, intvId, video)
   return await serverApi.post(`/api/v1/intvs/${questionSetId}/answers`, {
     intvId,
     ...video,
@@ -100,7 +100,7 @@ export async function requestAnswerAnalysis(
 
 // 면접 완료
 export async function finishInterview(intvId: number): Promise<ApiResponse<null>> {
-  return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/finish`)
+  return await serverApi.patch(`/api/v1/intvs/${intvId}/finish`)
 }
 
 // 시선/고개 통계 서버 전송
@@ -110,15 +110,22 @@ export async function sendGazeStats(questionSetId: number, payload: InterviewBat
 
 // 면접 시작
 export async function startInterview(intvId: number): Promise<ApiResponse<null>> {
-  return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/start`)
+  return await serverApi.patch(`/api/v1/intvs/${intvId}/start`)
 }
 
 // 면저 중단
 export async function pauseInterview(intvId: number): Promise<ApiResponse<null>> {
-  return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/pause`)
+  return await serverApi.patch(`/api/v1/intvs/${intvId}/pause`)
 }
 
-// 면접 재개
+// 이어하기용 질문 컨텍스트 조회
+export async function restartContextInterview(
+  intvId: number,
+): Promise<ApiResponse<RestartContextInterviewResponse>> {
+  return await serverApi.get(`/api/v1/intvs/${intvId}/resume-context`)
+}
+
+// 면접 재개(이어하기)
 export async function restartInterview(intvId: number): Promise<ApiResponse<null>> {
-  return await serverApi.patch<null>(`/api/v1/intvs/${intvId}/resume`)
+  return await serverApi.patch(`/api/v1/intvs/${intvId}/resume`)
 }
