@@ -37,19 +37,49 @@ import {
 import { withAction } from '@/shared/lib/withAction'
 import { validateFileSize } from '@/featured/interview/utils/validateFileUpload'
 
-// 면접 생성(제목 추가)
+// 면접 생성(제목 입력)
 export async function createInterviewAction(
   title: string,
 ): Promise<ApiResponse<CreateInterviewResponse>> {
-  return withAction(() => createInterview(title))
+  const titleRegex = /^[가-힣a-zA-Z0-9 ]{1,20}$/
+  const nextTitle = title.trim()
+  if (!nextTitle)
+    return { success: false, code: '', message: '면접 제목을 입력해주세요.', data: null }
+  if (!titleRegex.test(nextTitle))
+    return {
+      success: false,
+      code: '',
+      message: '제목은 공백을 포함한 한글, 영어, 숫자 1~20자만 가능합니다.',
+      data: null,
+    }
+  return withAction(() => createInterview(nextTitle))
 }
 
 // 면접 제목 수정
 export async function updateInterviewTitleAction(
-  intvId: number,
+  intvId: number | null,
   title: string,
 ): Promise<ApiResponse<UpdateInterviewTitleResponse>> {
-  return withAction(() => updateInterviewTitle(intvId, title))
+  if (!intvId)
+    return {
+      success: false,
+      code: '',
+      message: '유효한 면접이 아닙니다.',
+      data: null,
+    }
+
+  const titleRegex = /^[가-힣a-zA-Z0-9 ]{1,20}$/
+  const nextTitle = title.trim()
+  if (!nextTitle)
+    return { success: false, code: '', message: '면접 제목을 입력해주세요.', data: null }
+  if (!titleRegex.test(nextTitle))
+    return {
+      success: false,
+      code: '',
+      message: '제목은 공백을 포함한 한글, 영어, 숫자 1~20자만 가능합니다.',
+      data: null,
+    }
+  return withAction(() => updateInterviewTitle(intvId, nextTitle))
 }
 
 // 면접 문서 업로드 presignedUrl 발급
