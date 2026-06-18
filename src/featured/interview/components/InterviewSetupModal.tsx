@@ -3,6 +3,9 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSetupSteps } from '@/featured/interview/hooks/useSetupSteps'
+import { useDocumentUpload } from '@/featured/interview/hooks/useDocumentUpload'
+import { useTitleStep } from '@/featured/interview/hooks/useTitleStep'
 import { CameraStep } from '@/featured/interview/components/setup/CameraStep'
 import { DocumentStep } from '@/featured/interview/components/setup/DocumentStep'
 import { MicStep } from '@/featured/interview/components/setup/MicStep'
@@ -12,19 +15,12 @@ import { useCameraHandler } from '@/featured/interview/hooks/useCameraHandler'
 import type { useInterview } from '@/featured/interview/hooks/useInterview'
 import { useMicPermission } from '@/featured/interview/hooks/useMicPermission'
 import { useMicRecorder } from '@/featured/interview/hooks/useMicRecorder'
-import { type InterviewFileType, type StepStatus } from '@/featured/interview/types'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog'
 import {
-  completeFileUploadAction,
-  createInterviewAction,
-  generateInterviewQuestionAction,
-  issuePresignedUrlAction,
   restartInterviewAction,
   startInterviewAction,
-  updateInterviewTitleAction,
 } from '@/featured/interview/actions/interview.action'
-import uploadFileToS3 from '@/shared/lib/utils/uploadFileToS3'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
 import { toast } from 'sonner'
 import { trackEvent } from '@/shared/lib/utils/analytics'
@@ -38,17 +34,17 @@ const RESUME_LOCKED_STEPS = [1, 2]
 const STEP2_LOCKED = [2]
 
 export function InterviewSetupModal({ session, isRestart = false }: InterviewSetupModalProps) {
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(() =>
-    isRestart ? new Set([1, 2]) : new Set(),
-  )
-  const [isStep2Locked, setIsStep2Locked] = useState(isRestart)
-  const [currentStep, setCurrentStep] = useState(() => (isRestart ? 3 : 1))
-  const [maxReachedStep, setMaxReachedStep] = useState(() => (isRestart ? 3 : 1))
-  const [title, setTitle] = useState('')
-  const [resume, setResume] = useState<File | null>(null)
-  const [portfolio, setPortfolio] = useState<File | null>(null)
-  const [coverLetter, setCoverLetter] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
+  const {
+    isStep2Locked,
+    setIsStep2Locked,
+    currentStep,
+    maxReachedStep,
+    completeStep,
+    navigateToStep,
+    doneCount,
+    allDone,
+    statuses,
+  } = useSetupSteps(isRestart)
   const [isPollingActive, setIsPollingActive] = useState(false)
 
   const cameraHandler = useCameraHandler()
@@ -66,9 +62,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
     handlePollingComplete,
   )
   const activeQuestions =
-    isRestart && session.unansweredQuestions?.length
-      ? session.unansweredQuestions
-      : questions
+    isRestart && session.unansweredQuestions?.length ? session.unansweredQuestions : questions
 
   const isQuestionsReady = !!activeQuestions && activeQuestions.length > 0
 
@@ -99,163 +93,22 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
     }
   }, [cleanupSetupDevices, session.showSetup])
 
-  const statuses: StepStatus[] = [1, 2, 3, 4].map((step) => {
-    if (step === currentStep) return 'active'
-    if (completedSteps.has(step)) return 'done'
-    return 'pending'
+  const {
+    resume,
+    setResume,
+    portfolio,
+    setPortfolio,
+    coverLetter,
+    setCoverLetter,
+    isUploading,
+    handleDocumentConfirm,
+  } = useDocumentUpload({ interviewId: session.interviewId, completeStep, setIsStep2Locked })
+
+  const { title, setTitle, syncInterviewTitle, handleTitleConfirm } = useTitleStep({
+    interviewId: session.interviewId,
+    setInterviewId: session.setInterviewId,
+    completeStep,
   })
-
-  const doneCount = completedSteps.size
-  const allDone = doneCount === 4
-
-  const handleDocumentConfirm = async () => {
-    if (!session.interviewId || !resume) return
-
-    try {
-      setIsUploading(true)
-      const uploadTargets: Array<{ file: File | null; type: InterviewFileType }> = [
-        { file: resume, type: 'RESUME' },
-        { file: portfolio, type: 'PORTFOLIO' },
-        { file: coverLetter, type: 'COVER_LETTER' },
-      ]
-      const uploadedFiles: Array<{
-        fileType: InterviewFileType
-        originalFileName: string
-        fileKey: string
-        fileUrl: string
-      }> = []
-
-      for (const target of uploadTargets) {
-        if (!target.file) continue
-
-        const urlRes = await issuePresignedUrlAction(session.interviewId, {
-          fileType: target.type,
-          originalFileName: target.file.name,
-          fileSizeBytes: target.file.size,
-          contentType: 'application/pdf',
-        })
-
-        if (!urlRes.success || !urlRes.data) {
-          throw new Error(urlRes.message || `${target.type} presigned URL 발급 실패`)
-        }
-
-        const { presignedUrl, fileType, originalFileName, fileKey, fileUrl } = urlRes.data
-        const s3Res = await uploadFileToS3(target.file, presignedUrl)
-
-        if (!s3Res.success) {
-          throw new Error(`${target.type} S3 업로드 실패`)
-        }
-
-        trackEvent('upload_s3_success', { category: 'interview_setup' })
-        uploadedFiles.push({
-          fileType,
-          originalFileName,
-          fileKey,
-          fileUrl,
-        })
-      }
-
-      if (uploadedFiles.length === 0) {
-        toast.error('업로드할 파일이 없습니다.')
-      }
-
-      const completeRes = await completeFileUploadAction(session.interviewId, {
-        files: uploadedFiles,
-      })
-      if (!completeRes.success) {
-        toast.error(completeRes.message || '파일 업로드 완료 처리 실패')
-        return
-      }
-
-      completeStep(2)
-      setIsStep2Locked(true)
-
-      // 질문 생성을 기다리는 시간의 시작점 코드 추가 - GA 이벤트 전송
-      trackEvent('question_gen_start', { category: 'user_interview' })
-      generateInterviewQuestionAction(session.interviewId).catch((err) => console.error(err))
-    } catch (error) {
-      console.error('문서 업로드 중 오류:', error)
-      const errorMessage = error instanceof Error ? error.message : '문서 업로드 중 오류 발생'
-
-      trackEvent('upload_s3_error', { category: 'interview_setup' })
-      toast.error(errorMessage)
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  const completeStep = (step: number) => {
-    const newCompleted = new Set([...completedSteps, step])
-    setCompletedSteps(newCompleted)
-    const nextStep = [1, 2, 3, 4].find((s) => !newCompleted.has(s))
-    const dest = nextStep ?? 5
-    setCurrentStep(dest)
-    if (dest > maxReachedStep) setMaxReachedStep(dest)
-  }
-
-  const syncInterviewTitle = async () => {
-    if (!session.interviewId) return
-
-    const titleRegex = /^[가-힣a-zA-Z0-9 ]{1,20}$/
-    const nextTitle = title.trim()
-
-    if (!nextTitle || !titleRegex.test(nextTitle)) return
-
-    const result = await updateInterviewTitleAction(session.interviewId, nextTitle)
-    if (!result.success) {
-      toast.error(result.message || '면접 제목 수정 실패')
-    } else {
-      setTitle(nextTitle)
-    }
-  }
-
-  const navigateToStep = (step: number) => {
-    if (step === 2 && isStep2Locked) return
-    if (step === 1 && isRestart) return
-    if (maxReachedStep >= 4 || completedSteps.has(step)) {
-      if (step === 1) {
-        void syncInterviewTitle()
-      }
-      setCurrentStep(step)
-    }
-  }
-
-  const handleTitleConfirm = async () => {
-    const titleRegex = /^[가-힣a-zA-Z0-9 ]{1,20}$/
-    const targetTitle = title.trim()
-
-    if (!targetTitle) {
-      toast.error('면접 제목을 입력해주세요.')
-      return
-    }
-    if (!titleRegex.test(targetTitle)) {
-      toast.error('제목은 공백을 포함한 한글, 영어, 숫자 1~20자만 가능합니다.')
-      return
-    }
-
-    if (session.interviewId) {
-      const result = await updateInterviewTitleAction(session.interviewId, targetTitle)
-      if (result.success) {
-        setTitle(targetTitle)
-        trackEvent('complete_title_input', { category: 'interview_setup' })
-        completeStep(1)
-      } else {
-        toast.error(result.message || '면접 제목 수정 실패')
-      }
-    } else {
-      const result = await createInterviewAction(targetTitle)
-      if (result.success) {
-        if (result.data) {
-          session.setInterviewId(result.data.intvId)
-        }
-        setTitle(targetTitle)
-        trackEvent('complete_title_input', { category: 'interview_setup' })
-        completeStep(1)
-      } else {
-        toast.error(result.message || '면접 생성 실패')
-      }
-    }
-  }
 
   const handleCameraConfirm = () => {
     cameraHandler.confirmCamera()
@@ -357,7 +210,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
           <SetupSidebar
             statuses={statuses}
             doneCount={doneCount}
-            onStepClick={navigateToStep}
+            onStepClick={(step) => navigateToStep(step, () => void syncInterviewTitle())}
             freeNavigation={maxReachedStep >= 4}
             lockedSteps={isRestart ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
           />
