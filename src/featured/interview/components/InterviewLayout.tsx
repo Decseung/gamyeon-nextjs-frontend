@@ -15,6 +15,11 @@ export function InterviewLayout() {
   const idParam = searchParams.get('id')
 
   useEffect(() => {
+    const from = sessionStorage.getItem('interviewFrom')
+    session.setCancelDestination(from === 'history' ? '/history' : '/dashboard')
+  }, [])
+
+  useEffect(() => {
     if (isRestart && idParam) {
       const intvId = Number(idParam)
       if (!isNaN(intvId)) {
@@ -23,6 +28,8 @@ export function InterviewLayout() {
           const res = await restartContextInterviewAction(intvId)
           if (res.success && res.data) {
             session.setRestartContext(res.data)
+          } else if (!res.success) {
+            session.setRestartError(res.message)
           }
         }
         fetchData()

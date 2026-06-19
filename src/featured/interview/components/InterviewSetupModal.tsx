@@ -207,68 +207,94 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
       >
         <DialogTitle className="sr-only">면접 환경 설정</DialogTitle>
         <div className="flex min-h-155">
-          <SetupSidebar
-            statuses={statuses}
-            doneCount={doneCount}
-            onStepClick={(step) => navigateToStep(step, () => void syncInterviewTitle())}
-            freeNavigation={maxReachedStep >= 4}
-            lockedSteps={isRestart ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined}
-          />
+          {!session.restartError && (
+            <SetupSidebar
+              statuses={statuses}
+              doneCount={doneCount}
+              onStepClick={(step) => navigateToStep(step, () => void syncInterviewTitle())}
+              freeNavigation={maxReachedStep >= 4}
+              lockedSteps={
+                isRestart ? RESUME_LOCKED_STEPS : isStep2Locked ? STEP2_LOCKED : undefined
+              }
+            />
+          )}
           <div className="flex flex-1 flex-col">
-            <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentStep}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -16 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="flex flex-1 flex-col"
-                >
-                  {renderStep()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            <div className="border-border/50 flex items-center justify-between border-t px-8 py-4">
-              <Button variant="ghost" size="sm" onClick={handleCancel} className="cursor-pointer">
-                취소
-              </Button>
-              <Button
-                disabled={
-                  !allDone ||
-                  !isQuestionsReady ||
-                  !cameraHandler.cameraStream ||
-                  (!isRestart && (!title.trim() || !resume))
-                }
-                onClick={async () => {
-                  if (!cameraHandler.cameraStream) {
-                    console.error('카메라 스트림이 아직 준비되지 않았습니다.')
-                    return
-                  }
-
-                  if (session.interviewId) {
-                    if (isRestart) {
-                      await restartInterviewAction(session.interviewId)
-                    } else {
-                      await startInterviewAction(session.interviewId)
+            {session.restartError ? (
+              <>
+                <div className="flex flex-1 flex-col items-center justify-center px-8 py-8">
+                  <p className="text-muted-foreground text-center text-sm">
+                    {session.restartError}
+                  </p>
+                </div>
+                <div className="border-border/50 flex items-center justify-end border-t px-8 py-4">
+                  <Button onClick={session.handleSetupCancel} className="cursor-pointer">
+                    확인
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-1 flex-col overflow-y-auto px-8 py-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentStep}
+                      initial={{ opacity: 0, x: 16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -16 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="flex flex-1 flex-col"
+                    >
+                      {renderStep()}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+                <div className="border-border/50 flex items-center justify-between border-t px-8 py-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCancel}
+                    className="cursor-pointer"
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    disabled={
+                      !allDone ||
+                      !isQuestionsReady ||
+                      !cameraHandler.cameraStream ||
+                      (!isRestart && (!title.trim() || !resume))
                     }
-                  }
+                    onClick={async () => {
+                      if (!cameraHandler.cameraStream) {
+                        console.error('카메라 스트림이 아직 준비되지 않았습니다.')
+                        return
+                      }
 
-                  trackEvent('start_interview', { category: 'interview_setup' })
-                  session.handleSetupComplete({
-                    title: title.trim() || '모의 면접',
-                    basePose: cameraHandler.basePose,
-                    stream: cameraHandler.cameraStream,
-                    interviewId: session.interviewId,
-                    questions: activeQuestions ?? [],
-                  })
-                }}
-                className="cursor-pointer gap-2"
-              >
-                {!isQuestionsReady && isPollingActive ? '질문 생성 중' : '면접 시작하기'}
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+                      if (session.interviewId) {
+                        if (isRestart) {
+                          await restartInterviewAction(session.interviewId)
+                        } else {
+                          await startInterviewAction(session.interviewId)
+                        }
+                      }
+
+                      trackEvent('start_interview', { category: 'interview_setup' })
+                      session.handleSetupComplete({
+                        title: title.trim() || '모의 면접',
+                        basePose: cameraHandler.basePose,
+                        stream: cameraHandler.cameraStream,
+                        interviewId: session.interviewId,
+                        questions: activeQuestions ?? [],
+                      })
+                    }}
+                    className="cursor-pointer gap-2"
+                  >
+                    {!isQuestionsReady && isPollingActive ? '질문 생성 중' : '면접 시작하기'}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>
