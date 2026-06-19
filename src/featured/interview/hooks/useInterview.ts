@@ -32,6 +32,8 @@ export function useInterview() {
   const [typingKey, setTypingKey] = useState(0)
   const [questionRevealed, setQuestionRevealed] = useState(false)
   const [showSetup, setShowSetup] = useState(true)
+  const [restartError, setRestartError] = useState<string | null>(null)
+  const [cancelDestination, setCancelDestination] = useState('/dashboard')
   const [interviewTitle, setInterviewTitle] = useState('AI 모의 면접')
   const [basePose, setBasePose] = useState<{ pitch: number; yaw: number } | null>(null)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
@@ -110,7 +112,7 @@ export function useInterview() {
 
   const handleSetupCancel = () => {
     cleanupInterviewMedia()
-    router.push('/dashboard')
+    router.push(cancelDestination)
   }
 
   const beginAnswering = useCallback(() => {
@@ -280,6 +282,10 @@ export function useInterview() {
     setInterviewId,
     restartContext,
     setRestartContext,
+    restartError,
+    setRestartError,
+    cancelDestination,
+    setCancelDestination,
     unansweredQuestions,
     phase,
     timeLeft,

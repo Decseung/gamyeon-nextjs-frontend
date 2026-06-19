@@ -23,6 +23,7 @@ export function ResumeInterviewModal({ open, onClose, pausedRecords }: ResumeInt
 
   const handleResume = (intvId: number) => {
     onClose()
+    sessionStorage.setItem('interviewFrom', 'dashboard')
     router.push(`/interview?restart=true&id=${intvId}`)
   }
 

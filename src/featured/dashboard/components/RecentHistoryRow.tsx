@@ -68,6 +68,9 @@ export function RecentHistoryRow({ item }: RecentHistoryRowProps) {
     <Link
       href={isPaused ? `/interview?restart=true&id=${item.intvId}` : `/report/${item.intvId}`}
       className="flex h-18.25 flex-col justify-center"
+      onClick={() => {
+        if (isPaused) sessionStorage.setItem('interviewFrom', 'dashboard')
+      }}
     >
       {inner}
     </Link>
