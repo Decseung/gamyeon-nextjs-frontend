@@ -48,12 +48,18 @@ export function InterviewLayout() {
       )
     }
 
+    const handlePopState = () => {
+      if (!window.location.pathname.startsWith('/interview')) {
+        sendPause()
+      }
+    }
+
     window.addEventListener('beforeunload', sendPause)
-    window.addEventListener('popstate', sendPause)
+    window.addEventListener('popstate', handlePopState)
 
     return () => {
       window.removeEventListener('beforeunload', sendPause)
-      window.removeEventListener('popstate', sendPause)
+      window.removeEventListener('popstate', handlePopState)
     }
   }, [session.interviewId, session.phase])
 
