@@ -42,18 +42,31 @@ export function InterviewLayout() {
     if (interviewId === null || phase === 'ready' || phase === 'finished') return
 
     const sendPause = () => {
-      navigator.sendBeacon(
-        '/api/interview/pause',
-        new Blob([JSON.stringify({ intvId: interviewId })], { type: 'application/json' }),
-      )
+      const body = JSON.stringify({ intvId: interviewId })
+      const blob = new Blob([body], { type: 'application/json' })
+      const sent = navigator.sendBeacon('/api/interview/pause', blob)
+      if (!sent) {
+        fetch('/api/interview/pause', {
+          method: 'POST',
+          body,
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
+        }).catch(() => {})
+      }
+    }
+
+    const handlePopState = () => {
+      if (!window.location.pathname.startsWith('/interview')) {
+        sendPause()
+      }
     }
 
     window.addEventListener('beforeunload', sendPause)
-    window.addEventListener('popstate', sendPause)
+    window.addEventListener('popstate', handlePopState)
 
     return () => {
       window.removeEventListener('beforeunload', sendPause)
-      window.removeEventListener('popstate', sendPause)
+      window.removeEventListener('popstate', handlePopState)
     }
   }, [session.interviewId, session.phase])
 
