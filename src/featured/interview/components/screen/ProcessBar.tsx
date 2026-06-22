@@ -30,6 +30,7 @@ export function ProcessBar({
         <Button
           variant="ghost"
           size="icon"
+          aria-label="면접 중단"
           className="h-8 w-8 text-white/60 hover:bg-white/10 hover:text-white"
           onClick={onBackClick}
         >

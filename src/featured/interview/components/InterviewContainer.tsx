@@ -14,6 +14,8 @@ export function InterviewContainer({ session }: InterviewPageProps) {
   const currentQuestionSetId =
     session.interviewQuestions[session.currentQuestion]?.questionSetId ?? null
 
+  const handleStopRequest = () => session.setShowEndDialog(true)
+
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-slate-950 text-white">
       <ProcessBar
@@ -22,8 +24,8 @@ export function InterviewContainer({ session }: InterviewPageProps) {
         phase={session.phase}
         isActive={session.isActive}
         questions={session.interviewQuestions}
-        onEndClick={() => session.setShowEndDialog(true)}
-        onBackClick={() => session.setShowEndDialog(true)}
+        onEndClick={handleStopRequest}
+        onBackClick={handleStopRequest}
       />
       <QuestionBanner
         currentQuestion={session.currentQuestion}
