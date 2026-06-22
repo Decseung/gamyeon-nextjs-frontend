@@ -31,11 +31,10 @@ export function EndDialogModal({ session }: EndDialogModalProps) {
     setIsPending(true)
     try {
       await pauseInterviewAction(session.interviewId)
-    } finally {
-      // 무조건 router를 움직여야해서 catch 사용하지 않고 바로 finally로
-      setIsPending(false)
-      router.push('/history')
+    } catch (error) {
+      console.error('면접 중단 처리 실패:', error)
     }
+    router.push('/history')
   }
 
   return (
