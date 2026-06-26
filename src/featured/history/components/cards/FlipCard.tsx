@@ -27,6 +27,11 @@ export function FlipCard({ record }: FlipCardProps) {
   const cardType = getReportCardType(record.intvStatus, record.report?.reportStatus)
 
   const prevCardType = useRef<string | null>(null)
+  const latestCardTypeRef = useRef<string | null>(cardType)
+  const analysingMountedAtRef = useRef<number | null>(null)
+  const reportCompletedRef = useRef(false)
+  const hiddenOccurredRef = useRef(false)
+  const earlyExitSentRef = useRef(false)
 
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
