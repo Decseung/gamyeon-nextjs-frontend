@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/shared/ui/card'
 import { InterviewReportItem } from '@/featured/history/types'
