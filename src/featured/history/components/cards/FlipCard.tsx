@@ -39,6 +39,10 @@ export function FlipCard({ record }: FlipCardProps) {
   // AI 리포트 대기 마찰률: 리포트 단위 기준
   const reportId = record.report?.reportId
 
+  useLayoutEffect(() => {
+    latestCardTypeRef.current = cardType
+  }, [cardType])
+
   useEffect(() => {
     if (cardType === 'analysingCard' && prevCardType.current !== 'analysingCard' && reportId) {
       trackEvent('report_gen_start', {
