@@ -75,6 +75,41 @@ export function FlipCard({ record }: FlipCardProps) {
     prevCardType.current = cardType
   }, [cardType, reportId])
 
+  useEffect(() => {
+    if (!isAnalysing || !reportId) return
+
+    analysingMountedAtRef.current = Date.now()
+    reportCompletedRef.current = false
+    hiddenOccurredRef.current = document.hidden
+    earlyExitSentRef.current = false
+
+    return () => {
+      const mountedAt = analysingMountedAtRef.current
+      analysingMountedAtRef.current = null
+
+      if (!mountedAt) return
+      if (earlyExitSentRef.current) return
+      if (reportCompletedRef.current || latestCardTypeRef.current === 'completedCard') return
+      if (hiddenOccurredRef.current) return
+
+      const elapsedMs = Date.now() - mountedAt
+      if (elapsedMs > 10000) return
+
+      const earlyExitKey = `report_waiting_early_exit:${reportId}`
+      if (sessionStorage.getItem(earlyExitKey)) return
+
+      sessionStorage.setItem(earlyExitKey, 'true')
+      earlyExitSentRef.current = true
+
+      trackEvent('report_waiting_early_exit', {
+        category: 'ai_report',
+        report_id: reportId,
+        elapsed_ms: elapsedMs,
+        reason: 'component_unmount',
+      })
+    }
+  }, [isAnalysing, reportId])
+
   const handleRageClick = useCallback(() => {
     if (!isAnalysing || !reportId) return
 
