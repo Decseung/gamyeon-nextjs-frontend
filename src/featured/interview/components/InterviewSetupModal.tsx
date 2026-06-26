@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle2, ChevronRight } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSetupSteps } from '@/featured/interview/hooks/useSetupSteps'
 import { useDocumentUpload } from '@/featured/interview/hooks/useDocumentUpload'
@@ -22,6 +22,7 @@ import {
   startInterviewAction,
 } from '@/featured/interview/actions/interview.action'
 import { useQuestionPolling } from '@/featured/interview/hooks/useQuestionPolling'
+import { QUESTION_LOADING_TEXTS } from '@/featured/interview/constants'
 import { toast } from 'sonner'
 import { trackEvent } from '@/shared/lib/utils/analytics'
 
@@ -46,6 +47,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
     statuses,
   } = useSetupSteps(isRestart)
   const [isPollingActive, setIsPollingActive] = useState(false)
+  const [loadingTextIndex, setLoadingTextIndex] = useState(0)
 
   const cameraHandler = useCameraHandler()
   const micPermission = useMicPermission(() => {
@@ -65,6 +67,14 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
     isRestart && session.unansweredQuestions?.length ? session.unansweredQuestions : questions
 
   const isQuestionsReady = !!activeQuestions && activeQuestions.length > 0
+
+  useEffect(() => {
+    if (!isPollingActive || isQuestionsReady) return
+    const interval = setInterval(() => {
+      setLoadingTextIndex((prev) => (prev + 1) % QUESTION_LOADING_TEXTS.length)
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [isPollingActive, isQuestionsReady])
 
   const { cleanupCamera } = cameraHandler
   const { cleanupMic } = micPermission
@@ -178,6 +188,30 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
           />
         )
       default:
+        if (isPollingActive && !isQuestionsReady) {
+          return (
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <div className="bg-primary/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              </div>
+              <h3 className="text-lg font-bold">질문 생성중입니다...</h3>
+              <div className="mt-1.5 h-5">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={loadingTextIndex}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-muted-foreground text-sm"
+                  >
+                    {QUESTION_LOADING_TEXTS[loadingTextIndex]}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+            </div>
+          )
+        }
         return (
           <div className="flex flex-1 flex-col items-center justify-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
