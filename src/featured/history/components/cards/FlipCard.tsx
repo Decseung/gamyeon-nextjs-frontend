@@ -66,6 +66,8 @@ export function FlipCard({ record }: FlipCardProps) {
     }
 
     if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
+      reportCompletedRef.current = true
+
       trackEvent('report_gen_complete', {
         category: 'ai_report',
         report_id: reportId,
