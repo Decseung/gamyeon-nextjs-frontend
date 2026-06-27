@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getInterviewQuestionsAction } from '@/featured/interview/actions/interview.action'
 import { useEffect } from 'react'
 import { trackEvent } from '@/shared/lib/utils/analytics'
+import type { ApiResponse } from '@/shared/lib/api'
+import type { GetInterviewQuestionsResponse } from '@/featured/interview/types'
 
 export function useQuestionPolling(
   intvId: number | null,
@@ -20,15 +22,16 @@ export function useQuestionPolling(
       }
       return response.data?.questions || []
     },
-    // 데이터가 비어있거나 생성 중일 때만 2초마다 폴링
+    // query.state.data는 select 이전 원본 응답 객체이므로 questions 필드를 직접 참조
     refetchInterval: (query) => {
-      const questions = query.state.data
-      // 삼항연산자: 리스폰스 데이터가 없으면(null) 2초마다 폴링, 리스폰스 데이터가 있으면 폴링 중단
-      return !questions || (Array.isArray(questions) && questions.length === 0) ? 2000 : false
+      const raw = query.state.data as ApiResponse<GetInterviewQuestionsResponse> | undefined
+      const questions = raw?.data?.questions
+      return !questions || questions.length === 0 ? 2000 : false
     },
-    enabled: isEnabled && !!intvId, // 활성화
-    staleTime: 0, // 신선도
-    retry: 2, // 재시도
+    refetchIntervalInBackground: true,
+    enabled: isEnabled && !!intvId,
+    staleTime: 0,
+    retry: 2,
   })
 
   useEffect(() => {

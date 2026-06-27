@@ -45,7 +45,7 @@ export function RecentHistoryRow({ item }: RecentHistoryRowProps) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{item.title}</p>
         {isPaused ? (
-          <p className="text-xs text-green-600">일시정지됨</p>
+          <p className="text-xs text-green-600">중단된 면접</p>
         ) : isFailed ? (
           <p className="text-xs text-red-500">리포트 발행 실패</p>
         ) : isAnalyzing ? (

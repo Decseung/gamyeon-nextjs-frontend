@@ -25,6 +25,13 @@ const QUESTIONS = [
   '마지막으로 저희에게 하고 싶은 질문이 있으신가요?',
 ] as const
 
+const QUESTION_LOADING_TEXTS = [
+  'AI가 맞춤 면접 질문을 준비하고 있습니다.',
+  '이력서를 꼼꼼히 분석하고 있습니다.',
+  '질문을 생성하고 있습니다.',
+  '조금만 더 기다려주세요.',
+] as const
+
 export {
   LEFT_EYE,
   RIGHT_EYE,
@@ -37,4 +44,5 @@ export {
   TOTAL_THINK_TIME,
   TOTAL_ANSWER_TIME,
   QUESTIONS,
+  QUESTION_LOADING_TEXTS,
 }
