@@ -72,7 +72,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
     if (!isPollingActive || isQuestionsReady) return
     const interval = setInterval(() => {
       setLoadingTextIndex((prev) => (prev + 1) % QUESTION_LOADING_TEXTS.length)
-    }, 2500)
+    }, 3000)
     return () => clearInterval(interval)
   }, [isPollingActive, isQuestionsReady])
 
