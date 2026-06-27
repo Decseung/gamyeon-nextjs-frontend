@@ -110,6 +110,23 @@ export function FlipCard({ record }: FlipCardProps) {
     }
   }, [isAnalysing, reportId])
 
+  // 화면 비활성화가 발생한 세션은 초단기 이탈에서 제외
+  useEffect(() => {
+    if (!isAnalysing || !reportId) return
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) return
+
+      hiddenOccurredRef.current = true
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isAnalysing, reportId])
+
   const handleRageClick = useCallback(() => {
     if (!isAnalysing || !reportId) return
 
