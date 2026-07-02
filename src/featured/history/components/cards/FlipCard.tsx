@@ -32,6 +32,8 @@ export function FlipCard({ record }: FlipCardProps) {
   const reportCompletedRef = useRef(false)
   const hiddenOccurredRef = useRef(false)
   const earlyExitSentRef = useRef(false)
+  const analysingEffectRunRef = useRef(0)
+  const waitingSessionIdRef = useRef<string | null>(null)
 
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
