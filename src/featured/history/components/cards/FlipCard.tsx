@@ -52,19 +52,6 @@ export function FlipCard({ record }: FlipCardProps) {
         report_id: reportId,
       })
 
-      const waitingSessionKey = `report_waiting_session:${reportId}`
-
-      // 마찰률의 분모 이벤트, 같은 리포트 대기 건은 세션 내 1회만 잡음
-      if (!sessionStorage.getItem(waitingSessionKey)) {
-        sessionStorage.setItem(waitingSessionKey, 'true')
-
-        trackEvent('report_waiting_session', {
-          category: 'ai_report',
-          report_id: reportId,
-          page: 'history',
-          status: 'generating',
-        })
-      }
     }
 
     if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
