@@ -38,7 +38,7 @@ export function FlipCard({ record }: FlipCardProps) {
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
 
-  // AI 리포트 대기 마찰률: 리포트 단위 기준
+  // AI 리포트 대기 지표: 대기 세션 단위 기준
   const reportId = record.report?.reportId
 
   useLayoutEffect(() => {
