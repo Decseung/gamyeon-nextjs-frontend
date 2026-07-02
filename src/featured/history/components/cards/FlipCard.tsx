@@ -32,8 +32,8 @@ export function FlipCard({ record }: FlipCardProps) {
   const reportCompletedRef = useRef(false)
   const hiddenOccurredRef = useRef(false)
   const earlyExitSentRef = useRef(false)
-  const analysingEffectRunRef = useRef(0)
-  const waitingSessionIdRef = useRef<string | null>(null)
+  const analysingEffectRunRef = useRef(0) // 현재 대기 경험의 UUID 저장
+  const waitingSessionIdRef = useRef<string | null>(null) //StrictMode 점검용 cleanup 구분
 
   const isCompleted = cardType === 'completedCard'
   const isAnalysing = cardType === 'analysingCard'
