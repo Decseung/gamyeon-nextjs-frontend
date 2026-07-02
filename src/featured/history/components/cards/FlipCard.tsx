@@ -51,7 +51,6 @@ export function FlipCard({ record }: FlipCardProps) {
         category: 'ai_report',
         report_id: reportId,
       })
-
     }
 
     if (prevCardType.current === 'analysingCard' && cardType === 'completedCard' && reportId) {
@@ -69,35 +68,64 @@ export function FlipCard({ record }: FlipCardProps) {
   useEffect(() => {
     if (!isAnalysing || !reportId) return
 
-    analysingMountedAtRef.current = Date.now()
-    reportCompletedRef.current = false
-    hiddenOccurredRef.current = document.hidden
-    earlyExitSentRef.current = false
+    const effectRunId = ++analysingEffectRunRef.current
+    let waitingSessionId = waitingSessionIdRef.current
+    let mountedAt = analysingMountedAtRef.current
 
-    return () => {
-      const mountedAt = analysingMountedAtRef.current
-      analysingMountedAtRef.current = null
+    // 실제 분석 카드 노출 1회에 대해 대기 세션 생성
+    if (!waitingSessionId || mountedAt === null) {
+      waitingSessionId = crypto.randomUUID()
+      mountedAt = Date.now()
 
-      if (!mountedAt) return
-      if (earlyExitSentRef.current) return
-      if (reportCompletedRef.current || latestCardTypeRef.current === 'completedCard') return
-      if (hiddenOccurredRef.current) return
+      waitingSessionIdRef.current = waitingSessionId
+      analysingMountedAtRef.current = mountedAt
+      reportCompletedRef.current = false
+      hiddenOccurredRef.current = document.hidden
+      earlyExitSentRef.current = false
 
-      const elapsedMs = Date.now() - mountedAt
-      if (elapsedMs > 10000) return
-
-      const earlyExitKey = `report_waiting_early_exit:${reportId}`
-      if (sessionStorage.getItem(earlyExitKey)) return
-
-      sessionStorage.setItem(earlyExitKey, 'true')
-      earlyExitSentRef.current = true
-
-      trackEvent('report_waiting_early_exit', {
+      trackEvent('report_waiting_session', {
         category: 'ai_report',
         report_id: reportId,
-        elapsed_ms: elapsedMs,
-        reason: 'component_unmount',
+        waiting_session_id: waitingSessionId,
+        page: 'history',
+        status: 'generating',
       })
+    }
+
+    return () => {
+      window.setTimeout(() => {
+        // StrictMode가 cleanup 직후 effect를 다시 실행했다면 실제 이탈이 아님
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (analysingEffectRunRef.current !== effectRunId) return
+
+        // 실제 대기 세션 종료. 다음 진입에서는 새로운 UUID 생성
+        waitingSessionIdRef.current = null
+
+        if (analysingMountedAtRef.current === mountedAt) {
+          analysingMountedAtRef.current = null
+        }
+
+        if (earlyExitSentRef.current) return
+        if (reportCompletedRef.current || latestCardTypeRef.current === 'completedCard') return
+        if (hiddenOccurredRef.current) return
+
+        const elapsedMs = Date.now() - mountedAt
+        if (elapsedMs > 10000) return
+
+        const earlyExitKey = `report_waiting_early_exit:${waitingSessionId}`
+        if (sessionStorage.getItem(earlyExitKey)) return
+
+        sessionStorage.setItem(earlyExitKey, 'true')
+        earlyExitSentRef.current = true
+
+        trackEvent('report_waiting_early_exit', {
+          category: 'ai_report',
+          report_id: reportId,
+          waiting_session_id: waitingSessionId,
+          elapsed_ms: elapsedMs,
+          reason: 'component_unmount',
+        })
+      }, 0)
     }
   }, [isAnalysing, reportId])
 
