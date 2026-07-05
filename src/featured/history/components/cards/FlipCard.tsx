@@ -106,7 +106,7 @@ export function FlipCard({ record }: FlipCardProps) {
         }
 
         if (earlyExitSentRef.current) return
-        if (reportCompletedRef.current || latestCardTypeRef.current === 'completedCard') return
+        if (latestCardTypeRef.current !== 'analysingCard') return
         if (hiddenOccurredRef.current) return
 
         const elapsedMs = Date.now() - mountedAt
