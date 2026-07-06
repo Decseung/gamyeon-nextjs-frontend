@@ -95,6 +95,7 @@ export function SigninForm() {
       client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID!,
       redirect_uri: process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI!,
       response_type: process.env.NEXT_PUBLIC_KAKAO_RESPONSE_TYPE!,
+      scope: process.env.NEXT_PUBLIC_KAKAO_SCOPE!,
       state: 'kakao',
       code_challenge: challenge,
       code_challenge_method: 'S256',
