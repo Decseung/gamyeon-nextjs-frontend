@@ -22,7 +22,6 @@ export interface ApiResponse<T> {
 }
 
 export interface RequestConfig {
-  silent?: boolean
   params?: Record<string, string | number | boolean>
   headers?: Record<string, string>
   cache?: RequestCache

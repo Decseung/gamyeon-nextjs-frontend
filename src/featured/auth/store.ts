@@ -6,16 +6,12 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      accessToken: null,
       isLoggedIn: false,
-      signin: (user: User, accessToken: string) => {
-        set({ user, accessToken, isLoggedIn: true })
-      },
-      setAccessToken: (accessToken: string) => {
-        set({ accessToken })
+      signin: (user: User) => {
+        set({ user, isLoggedIn: true })
       },
       logout: () => {
-        set({ user: null, accessToken: null, isLoggedIn: false })
+        set({ user: null, isLoggedIn: false })
       },
     }),
     {

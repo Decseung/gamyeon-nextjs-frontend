@@ -3,7 +3,7 @@ import { PaginatedResponse } from '@/shared/lib/api/types'
 import { InterviewReportItem } from '../types'
 
 export async function getIntvList(): Promise<ApiResponse<InterviewReportItem[]>> {
-  const config = { silent: true, params: { size: 200 } }
+  const config = { params: { size: 200 } }
   const response = await serverApi.get<PaginatedResponse<InterviewReportItem>>(
     '/api/v1/intvs',
     config,

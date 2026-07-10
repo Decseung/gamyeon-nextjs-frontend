@@ -1,4 +1,3 @@
-export { clientApi } from './clientApi'
 export { serverApi } from './serverApi'
 export type {
   NetworkError,
