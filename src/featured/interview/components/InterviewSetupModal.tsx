@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle2, ChevronRight, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronRight, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSetupSteps } from '@/featured/interview/hooks/useSetupSteps'
 import { useDocumentUpload } from '@/featured/interview/hooks/useDocumentUpload'
@@ -58,7 +58,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
   const handlePollingComplete = useCallback(() => {
     setIsPollingActive(false)
   }, [])
-  const { data: questions } = useQuestionPolling(
+  const { questions, isFailed, isRetryableFailure, restartPolling } = useQuestionPolling(
     session.interviewId,
     isPollingActive,
     handlePollingComplete,
@@ -69,12 +69,12 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
   const isQuestionsReady = !!activeQuestions && activeQuestions.length > 0
 
   useEffect(() => {
-    if (!isPollingActive || isQuestionsReady) return
+    if (!isPollingActive || isQuestionsReady || isFailed) return
     const interval = setInterval(() => {
       setLoadingTextIndex((prev) => (prev + 1) % QUESTION_LOADING_TEXTS.length)
     }, 3000)
     return () => clearInterval(interval)
-  }, [isPollingActive, isQuestionsReady])
+  }, [isPollingActive, isQuestionsReady, isFailed])
 
   const { cleanupCamera } = cameraHandler
   const { cleanupMic } = micPermission
@@ -188,6 +188,31 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
           />
         )
       default:
+        if (isFailed) {
+          return (
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <div className="bg-destructive/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                <AlertCircle className="text-destructive h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold">질문 생성에 실패했습니다</h3>
+              <p className="text-muted-foreground mt-1.5 text-sm">
+                {isRetryableFailure
+                  ? '서버 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
+                  : '요청을 처리하지 못했습니다. 대시보드로 이동한 뒤 다시 시도해주세요.'}
+              </p>
+              <div className="mt-6 flex gap-2">
+                {isRetryableFailure && (
+                  <Button variant="outline" onClick={restartPolling} className="cursor-pointer">
+                    다시 시도
+                  </Button>
+                )}
+                <Button onClick={handleCancel} className="cursor-pointer">
+                  대시보드로 이동
+                </Button>
+              </div>
+            </div>
+          )
+        }
         if (isPollingActive && !isQuestionsReady) {
           return (
             <div className="flex flex-1 flex-col items-center justify-center">
@@ -323,7 +348,9 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
                     }}
                     className="cursor-pointer gap-2"
                   >
-                    {!isQuestionsReady && isPollingActive ? '질문 생성 중' : '면접 시작하기'}
+                    {!isQuestionsReady && isPollingActive && !isFailed
+                      ? '질문 생성 중'
+                      : '면접 시작하기'}
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
