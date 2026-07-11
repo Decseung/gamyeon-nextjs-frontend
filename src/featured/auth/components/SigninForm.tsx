@@ -19,11 +19,19 @@ const PKCE_VERIFIER_KEY = 'pkce_code_verifier'
 export function SigninForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signin } = useAuthStore()
+  const { signin, isLoggedIn, logout } = useAuthStore()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle')
   const [provider, setProvider] = useState<string | null>(null)
   const calledRef = useRef(false)
+
+  useEffect(() => {
+    // proxy가 쿠키 만료/거부로 이 페이지에 강제 리다이렉트한 경우, sessionStorage에
+    // 남아있는 로그인 상태(user/isLoggedIn)가 실제 쿠키 상태와 어긋날 수 있다.
+    // /signin 도달 자체가 비로그인 확정이므로 여기서 리셋한다.
+    if (isLoggedIn) logout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const error = searchParams.get('error')
@@ -67,7 +75,7 @@ export function SigninForm() {
           return
         }
 
-        signin(json.data.user, json.data.accessToken)
+        signin(json.data.user)
         setStatus('success')
         timeoutId = setTimeout(() => router.replace('/dashboard'), 700)
       } catch (err) {

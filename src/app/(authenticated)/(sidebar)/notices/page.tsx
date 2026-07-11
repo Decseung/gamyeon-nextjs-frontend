@@ -1,3 +1,4 @@
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import { NoticeHeader } from '@/featured/notice/components/NoticeHeader'
 import { NoticeClient } from '@/featured/notice/components/NoticeClient'
 import type { Notice } from '@/featured/notice/types'
@@ -12,6 +13,7 @@ export default async function NoticePage() {
       fetchedNotices = result.data
     }
   } catch (error) {
+    if (isRedirectError(error)) throw error
     console.error('공지사항 전체 페이지 불러오기 실패:', error)
   }
 

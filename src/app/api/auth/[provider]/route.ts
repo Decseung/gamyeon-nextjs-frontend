@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parseSetCookieExpires } from '@/shared/lib/utils/cookie'
+import { buildTokenExpiresMap } from '@/shared/lib/auth/jwt'
+import { setAuthTokenCookies } from '@/shared/lib/auth/cookies'
 
 const SUPPORTED_PROVIDERS = ['google', 'kakao'] as const
 type Provider = (typeof SUPPORTED_PROVIDERS)[number]
@@ -62,23 +63,17 @@ export async function POST(
     const response = NextResponse.json(data, { status: res.status })
 
     if (data.success && data.data) {
-      const isProd = process.env.NODE_ENV === 'production'
-      const cookieExpiresMap = parseSetCookieExpires(res.headers.getSetCookie())
-
-      response.cookies.set('accessToken', data.data.accessToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        path: '/',
-        expires: cookieExpiresMap.get('accessToken'),
-      })
-      response.cookies.set('refreshToken', data.data.refreshToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        path: '/',
-        expires: cookieExpiresMap.get('refreshToken'),
-      })
+      const expiresMap = buildTokenExpiresMap(
+        data.data.accessToken,
+        data.data.refreshToken,
+        res.headers.getSetCookie(),
+      )
+      setAuthTokenCookies(
+        response.cookies,
+        data.data.accessToken,
+        data.data.refreshToken,
+        expiresMap,
+      )
     }
 
     return response
