@@ -184,10 +184,10 @@ await fetch(presignedUrl, {
 NetworkError { message: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
 
 // 2) 백엔드가 success: false로 응답한 경우 — ApiResponse와 동일한 모양의 객체
-{ success: false, code: 'USER-E001', message: '...', data: null, errors: [...] | null, httpStatus: 400 }
+{ success: false, code: 'USER-E001', message: '...', data: null, errors: [...] | null }
 ```
 
-세부 분기는 `code`로, 일시적 에러(5xx) 여부 판단은 `httpStatus`로 합니다.
+HTTP status는 별도로 노출되지 않습니다. 분기는 `code`로 합니다.
 
 ```ts
 import type { ApiResponse } from '@/shared/lib/api'

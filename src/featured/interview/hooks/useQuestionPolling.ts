@@ -8,32 +8,31 @@ import {
   QUESTION_POLLING_TIMEOUT_MS,
 } from '@/featured/interview/constants'
 
-const HTTP_SERVER_ERROR_MIN = 500
+/** 서버 내부 오류 계열(CMMN-I001 서버 내부 오류, CMMN-I002 데이터베이스 오류) — 일시적일 수 있어 재시도 대상 */
+const RETRYABLE_ERROR_CODE_PREFIX = 'CMMN-I'
 
-/** 질문 조회 실패 — 백엔드 code와 HTTP status를 보존해 재시도 가능 여부 판별에 사용 */
+/** 질문 조회 실패 — 백엔드 에러 code를 보존해 재시도 가능 여부 판별에 사용 */
 class QuestionPollingError extends Error {
   readonly code: string
-  readonly httpStatus?: number
 
-  constructor(message: string, code: string, httpStatus?: number) {
+  constructor(message: string, code: string) {
     super(message)
     this.name = 'QuestionPollingError'
     this.code = code
-    this.httpStatus = httpStatus
   }
 }
 
 /**
  * 재시도 가능(일시적) 에러 판별:
  * - NETWORK_ERROR(네트워크 단절, 비정상 응답 body) → 재시도
- * - HTTP 5xx → 재시도
+ * - CMMN-I···(서버 내부 오류 계열) → 재시도
  * - 서버 액션 전송 자체가 실패한 알 수 없는 에러 → 네트워크 문제로 간주, 재시도
- * - 그 외(4xx 등 결정적 에러) → 즉시 실패
+ * - 그 외(CMMN-V··· 유효성, CMMN-A··· 인증·권한 등 결정적 에러) → 즉시 실패
  */
 function isRetryablePollingError(error: unknown): boolean {
   if (!(error instanceof QuestionPollingError)) return true
   if (error.code === 'NETWORK_ERROR') return true
-  return error.httpStatus !== undefined && error.httpStatus >= HTTP_SERVER_ERROR_MIN
+  return error.code.startsWith(RETRYABLE_ERROR_CODE_PREFIX)
 }
 
 export function useQuestionPolling(
@@ -51,11 +50,7 @@ export function useQuestionPolling(
       if (intvId === null) throw new Error('인터뷰 ID 가 없습니다.')
       const response = await getInterviewQuestionsAction(intvId)
       if (!response.success) {
-        throw new QuestionPollingError(
-          response.message || '면접 질문 조회 실패',
-          response.code,
-          response.httpStatus,
-        )
+        throw new QuestionPollingError(response.message || '면접 질문 조회 실패', response.code)
       }
       return response.data?.questions ?? []
     },
