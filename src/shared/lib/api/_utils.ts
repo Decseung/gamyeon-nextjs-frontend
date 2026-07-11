@@ -61,6 +61,7 @@ export const handleResponse = async <T>(
       message: body.message,
       data: null,
       errors: body.errors ?? null,
+      httpStatus: res.status,
     }
     throw error
   }

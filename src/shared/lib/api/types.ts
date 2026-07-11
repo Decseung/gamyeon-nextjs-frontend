@@ -19,6 +19,7 @@ export interface ApiResponse<T> {
   message: string
   data: T | null
   errors?: ApiFieldError[] | null
+  httpStatus?: number
 }
 
 export interface RequestConfig {
