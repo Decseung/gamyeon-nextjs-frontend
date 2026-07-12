@@ -11,6 +11,14 @@ import {
 /** 서버 내부 오류 계열(CMMN-I001 서버 내부 오류, CMMN-I002 데이터베이스 오류) — 일시적일 수 있어 재시도 대상 */
 const RETRYABLE_ERROR_CODE_PREFIX = 'CMMN-I'
 
+export type QuestionPollingStatus =
+  | 'idle'
+  | 'polling'
+  | 'success'
+  | 'retryable-error'
+  | 'terminal-error'
+  | 'timeout'
+
 /** 질문 조회 실패 — 백엔드 에러 code를 보존해 재시도 가능 여부 판별에 사용 */
 class QuestionPollingError extends Error {
   readonly code: string
@@ -68,21 +76,34 @@ export function useQuestionPolling(
   })
 
   const hasQuestions = !!query.data && query.data.length > 0
-  const isFailed = query.isError || isTimedOut
-  const isRetryableFailure = isTimedOut || (query.isError && isRetryablePollingError(query.error))
+  const status: QuestionPollingStatus = (() => {
+    // 타임아웃과 마지막 요청이 경합하더라도 질문이 도착했다면 성공을 우선한다.
+    if (hasQuestions) return 'success'
+    if (isEnabled && query.isError) {
+      return isRetryablePollingError(query.error) ? 'retryable-error' : 'terminal-error'
+    }
+    if (isTimedOut) return 'timeout'
+    return isEnabled && !!intvId ? 'polling' : 'idle'
+  })()
+  const isFailed =
+    status === 'retryable-error' || status === 'terminal-error' || status === 'timeout'
+  const isRetryableFailure = status === 'retryable-error' || status === 'timeout'
 
   // 질문 생성 전체 타임아웃 — 요청은 성공하지만 질문이 계속 오지 않는 경우
   // pollingEpoch: '다시 시도' 시 타이머를 재시작하기 위한 의존성
   useEffect(() => {
-    if (!isEnabled || hasQuestions || query.isError) return
+    if (!isEnabled || !intvId || hasQuestions || query.isError) return
     const timer = setTimeout(() => setIsTimedOut(true), QUESTION_POLLING_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [isEnabled, hasQuestions, query.isError, pollingEpoch])
+  }, [isEnabled, intvId, hasQuestions, query.isError, pollingEpoch])
 
   const restartPolling = useCallback(() => {
     setIsTimedOut(false)
     setPollingEpoch((prev) => prev + 1)
-    void queryClient.resetQueries({ queryKey: ['interview-question', intvId] })
+    void queryClient.resetQueries({
+      queryKey: ['interview-question', intvId],
+      exact: true,
+    })
   }, [queryClient, intvId])
 
   useEffect(() => {
@@ -95,13 +116,20 @@ export function useQuestionPolling(
   }, [hasQuestions, handlePollingComplete])
 
   useEffect(() => {
-    if (!isFailed) return
-    // 질문 생성 실패 - GA 이벤트 전송
-    trackEvent('question_gen_failed', { category: 'user_interview' })
-  }, [isFailed])
+    if (status === 'timeout') {
+      trackEvent('question_gen_timeout', { category: 'user_interview' })
+      return
+    }
+    if (status !== 'retryable-error' && status !== 'terminal-error') return
+    trackEvent('question_gen_failed', {
+      category: 'user_interview',
+      retryable: status === 'retryable-error',
+    })
+  }, [status])
 
   return {
     questions: query.data,
+    status,
     isFailed,
     isRetryableFailure,
     restartPolling,

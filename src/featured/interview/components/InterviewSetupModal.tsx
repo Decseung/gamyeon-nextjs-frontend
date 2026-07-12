@@ -58,7 +58,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
   const handlePollingComplete = useCallback(() => {
     setIsPollingActive(false)
   }, [])
-  const { questions, isFailed, isRetryableFailure, restartPolling } = useQuestionPolling(
+  const { questions, status, isFailed, isRetryableFailure, restartPolling } = useQuestionPolling(
     session.interviewId,
     isPollingActive,
     handlePollingComplete,
@@ -213,7 +213,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
             </div>
           )
         }
-        if (isPollingActive && !isQuestionsReady) {
+        if (status === 'polling' && !isQuestionsReady) {
           return (
             <div className="flex flex-1 flex-col items-center justify-center">
               <div className="bg-primary/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
@@ -348,9 +348,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
                     }}
                     className="cursor-pointer gap-2"
                   >
-                    {!isQuestionsReady && isPollingActive && !isFailed
-                      ? '질문 생성 중'
-                      : '면접 시작하기'}
+                    {!isQuestionsReady && status === 'polling' ? '질문 생성 중' : '면접 시작하기'}
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
