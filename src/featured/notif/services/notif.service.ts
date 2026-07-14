@@ -3,7 +3,7 @@ import type { ApiResponse } from '@/shared/lib/api'
 import type { GetNotifsParams, NotifListData } from '../types'
 
 const NOTIF_ENDPOINT = '/api/v1/notifs'
-const DEFAULT_NOTIF_PAGE_SIZE = 5
+export const DEFAULT_NOTIF_PAGE_SIZE = 5
 
 /**
  * 알림을 최신순으로 조회한다.
