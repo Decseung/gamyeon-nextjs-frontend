@@ -19,6 +19,8 @@ export interface Notif {
 export interface NotifListData {
   unreadCount: number
   notifs: Notif[]
+  /** 백엔드가 hasNext 제공하면 다음 커서 페이지 존재 여부를 우선 사용한다. */
+  hasNext?: boolean
 }
 
 /** 알림 목록의 커서 기반 조회 파라미터 */
@@ -27,4 +29,20 @@ export interface GetNotifsParams {
   cursorId?: number
   /** 한 번에 가져올 개수. 정책상 기본값은 5개다. */
   size?: number
+}
+
+/** 알림 목록과 읽음 상태를 관리하는 전역 Zustand 상태의 형태 */
+export interface NotifState {
+  notifs: Notif[]
+  unreadCount: number
+  nextCursorId: number | null
+  hasMore: boolean
+  isLoading: boolean
+  isLoadingMore: boolean
+  fetchInitialNotifs: () => Promise<void>
+  fetchMoreNotifs: () => Promise<void>
+  prependNotif: (notif: Notif) => void
+  markAsRead: (notifId: number) => Promise<void>
+  markAllAsRead: () => Promise<void>
+  resetNotifs: () => void
 }
