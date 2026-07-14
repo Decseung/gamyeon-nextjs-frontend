@@ -6,6 +6,8 @@ type FunnelStep =
   // 1. AI 대기 및 리포트 관련 이벤트들
   | 'question_gen_start' // 질문 생성 시작
   | 'question_gen_complete' // 질문 생성 완료
+  | 'question_gen_failed' // 질문 생성 실패
+  | 'question_gen_timeout' // 질문 생성 타임아웃
   | 'report_gen_start' // 리포트 생성 시작
   | 'report_gen_complete' // 리포트 생성 완료
   | 'report_waiting_hidden' // 리포트 대기 중 화면 비활성화
