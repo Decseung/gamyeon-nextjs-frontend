@@ -194,11 +194,11 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
               <div className="bg-destructive/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
                 <AlertCircle className="text-destructive h-8 w-8" />
               </div>
-              <h3 className="text-lg font-bold">질문 생성에 실패했습니다</h3>
+              <h3 className="text-lg font-bold">서버 연결에 문제가 발생했습니다</h3>
               <p className="text-muted-foreground mt-1.5 text-sm">
                 {isRetryableFailure
-                  ? '서버 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
-                  : '요청을 처리하지 못했습니다. 대시보드로 이동한 뒤 다시 시도해주세요.'}
+                  ? '일시적인 오류입니다. 잠시 후 다시 시도해주세요.'
+                  : '대시보드로 이동한 뒤 다시 시도해주세요.'}
               </p>
               <div className="mt-6 flex gap-2">
                 {isRetryableFailure && (
@@ -348,7 +348,7 @@ export function InterviewSetupModal({ session, isRestart = false }: InterviewSet
                     }}
                     className="cursor-pointer gap-2"
                   >
-                    {!isQuestionsReady && status === 'polling' ? '질문 생성 중' : '면접 시작하기'}
+                    면접 시작하기
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
