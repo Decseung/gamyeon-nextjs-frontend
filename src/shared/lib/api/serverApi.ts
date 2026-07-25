@@ -3,70 +3,46 @@ import { redirect } from 'next/navigation'
 import { ApiResponse, NetworkError } from './types'
 import type { RequestConfig } from './types'
 import { buildUrl, handleResponse, serializeBody } from './_utils'
-import { parseSetCookieExpires } from '@/shared/lib/utils/cookie'
+import { reissue } from '@/shared/lib/auth/reissue'
+import { setAuthTokenCookies } from '@/shared/lib/auth/cookies'
+
+type TryRefreshResult =
+  | { ok: true; accessToken: string }
+  | { ok: false; reason: 'invalid' | 'network' }
 
 /**
  * accessToken 재발급을 시도한다.
- * 성공 시 새 accessToken을 반환하고, 쿠키 저장을 시도한다.
+ *
+ * 평상시엔 proxy(src/proxy.ts)가 accessToken 부재를 감지해 네비게이션
+ * 시점에 미리 재발급하므로, 이 함수는 "요청 도중 만료"처럼 proxy를
+ * 통과한 뒤 accessToken이 만료되는 드문 경우의 폴백이다.
  *
  * 쿠키 저장 가능 여부:
  * - Server Action 컨텍스트 → 저장 성공 (이후 요청에도 유효)
  * - RSC 컨텍스트 → 저장 불가 (throw를 catch해 무시). 새 토큰은 현재
- *   요청의 retry에만 사용된다. 다음 네비게이션에서 proxy가 refreshToken
- *   유효성을 재확인하고 serverFetch가 다시 refresh를 수행한다.
- *   ※ 백엔드가 refreshToken을 단일 사용(rotation) 방식으로 운용하는 경우
- *      RSC에서 새 refreshToken을 저장하지 못해 루프가 생길 수 있으므로,
- *      그 경우 백엔드 측 grace period 또는 아키텍처 재검토가 필요하다.
+ *   요청의 retry에만 사용된다.
  *
- * @returns 새 accessToken 문자열, 실패 시 null
+ * 실패 시 reason으로 원인을 구분한다 (proxy와 동일한 정책):
+ * - invalid: refreshToken 부재 또는 백엔드의 명시적 거부 → 로그아웃 대상
+ * - network: 일시적 오류 → 로그아웃시키면 안 됨
  */
 async function tryRefresh(
   cookieStore: Awaited<ReturnType<typeof cookies>>,
-): Promise<string | null> {
+): Promise<TryRefreshResult> {
   const refreshToken = cookieStore.get('refreshToken')?.value
-  if (!refreshToken) return null
+  if (!refreshToken) return { ok: false, reason: 'invalid' }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
+  const result = await reissue(refreshToken)
+  if (!result.ok) return { ok: false, reason: result.reason }
+
+  // RSC 컨텍스트에서는 throw되므로 try/catch로 감싼다.
   try {
-    const res = await fetch(`${apiUrl}/api/v1/auth/reissue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    })
-
-    const data = await res.json()
-    if (!data.success || !data.data?.accessToken) return null
-
-    const newAccessToken: string = data.data.accessToken
-    const isProd = process.env.NODE_ENV === 'production'
-    const expiresMap = parseSetCookieExpires(res.headers.getSetCookie?.() ?? [])
-
-    // RSC 컨텍스트에서는 throw되므로 try/catch로 감싼다.
-    try {
-      cookieStore.set('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        path: '/',
-        expires: expiresMap.get('accessToken'),
-      })
-      if (data.data.refreshToken) {
-        cookieStore.set('refreshToken', data.data.refreshToken, {
-          httpOnly: true,
-          secure: isProd,
-          sameSite: 'lax',
-          path: '/',
-          expires: expiresMap.get('refreshToken'),
-        })
-      }
-    } catch {
-      // RSC 컨텍스트 — 쿠키 저장 불가, 현재 요청 retry에만 사용
-    }
-
-    return newAccessToken
+    setAuthTokenCookies(cookieStore, result.accessToken, result.refreshToken, result.expiresMap)
   } catch {
-    return null
+    // RSC 컨텍스트 — 쿠키 저장 불가, 현재 요청 retry에만 사용
   }
+
+  return { ok: true, accessToken: result.accessToken }
 }
 
 /**
@@ -125,8 +101,12 @@ async function serverFetch<T>(
   }
 
   if (res.status === 401) {
-    const newAccessToken = await tryRefresh(cookieStore)
-    if (!newAccessToken) {
+    const refreshResult = await tryRefresh(cookieStore)
+    if (!refreshResult.ok) {
+      // 일시적 오류 — 세션을 죽이지 않고 이번 요청만 실패시킨다 (proxy와 동일 정책)
+      if (refreshResult.reason === 'network') {
+        throw new NetworkError()
+      }
       try {
         cookieStore.delete('accessToken')
         cookieStore.delete('refreshToken')
@@ -137,7 +117,7 @@ async function serverFetch<T>(
     }
 
     try {
-      res = await doFetch(getAccessToken(newAccessToken))
+      res = await doFetch(getAccessToken(refreshResult.accessToken))
     } catch {
       throw new NetworkError()
     }

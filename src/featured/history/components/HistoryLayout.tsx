@@ -3,14 +3,14 @@
 import { useState } from 'react'
 import { SortBy } from '@/featured/history/types'
 import { useHistoryFilter } from '@/featured/history/hooks/useHistoryFilter'
-import { useReportListQuery } from '@/featured/history/hooks/useReportListQuery'
+import { useIntvListQuery } from '@/featured/history/hooks/useIntvListQuery'
 import { HistoryFilterBar } from '@/featured/history/components/HistoryFilterBar'
 import { HistoryContainer } from '@/featured/history/components/HistoryContainer'
 import { HistoryPagination } from '@/featured/history/components/HistoryPagination'
 import { useColumnsPerRow } from '@/featured/history/hooks/useColumnsPerRow'
 
 export function HistoryLayout() {
-  const { data: records = [] } = useReportListQuery()
+  const { data: records = [] } = useIntvListQuery()
   const { search, setSearch, sortBy, setSortBy, filtered } = useHistoryFilter(records)
   const cols = useColumnsPerRow()
   const [currentPage, setCurrentPage] = useState(1)

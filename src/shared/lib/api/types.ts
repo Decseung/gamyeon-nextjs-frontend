@@ -14,17 +14,24 @@ export class NetworkError extends Error {
 
 /** 서버 공통 응답 래퍼 */
 export interface ApiResponse<T> {
-  success: boolean 
-  code: string 
-  message: string 
-  data: T | null 
-  errors?: ApiFieldError[] | null 
+  success: boolean
+  code: string
+  message: string
+  data: T | null
+  errors?: ApiFieldError[] | null
 }
 
 export interface RequestConfig {
-  silent?: boolean
   params?: Record<string, string | number | boolean>
   headers?: Record<string, string>
   cache?: RequestCache
   next?: NextFetchRequestConfig
+}
+
+export interface PaginatedResponse<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
 }

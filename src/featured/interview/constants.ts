@@ -25,6 +25,18 @@ const QUESTIONS = [
   '마지막으로 저희에게 하고 싶은 질문이 있으신가요?',
 ] as const
 
+const QUESTION_LOADING_TEXTS = [
+  'AI가 맞춤 면접 질문을 준비하고 있습니다.',
+  '이력서를 꼼꼼히 분석하고 있습니다.',
+  '질문을 생성하고 있습니다.',
+  '조금만 더 기다려주세요.',
+] as const
+
+// 질문 조회 폴링
+const QUESTION_POLLING_INTERVAL_MS = 2000 // 폴링 주기
+const QUESTION_POLLING_MAX_RETRIES = 2 // 일시적 에러(5xx/네트워크) 자동 재시도 횟수
+const QUESTION_POLLING_TIMEOUT_MS = 120_000 // 질문 생성 최대 대기 시간
+
 export {
   LEFT_EYE,
   RIGHT_EYE,
@@ -37,4 +49,8 @@ export {
   TOTAL_THINK_TIME,
   TOTAL_ANSWER_TIME,
   QUESTIONS,
+  QUESTION_LOADING_TEXTS,
+  QUESTION_POLLING_INTERVAL_MS,
+  QUESTION_POLLING_MAX_RETRIES,
+  QUESTION_POLLING_TIMEOUT_MS,
 }

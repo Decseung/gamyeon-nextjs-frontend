@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TOTAL_ANSWER_TIME, TOTAL_THINK_TIME } from '@/featured/interview/constants'
 import type {
   InterviewQuestions,
   InterviewSetupConfig,
   Phase,
+  RestartContextInterviewResponse,
   uploadAnswer,
 } from '@/featured/interview/types'
 import {
@@ -31,11 +32,23 @@ export function useInterview() {
   const [typingKey, setTypingKey] = useState(0)
   const [questionRevealed, setQuestionRevealed] = useState(false)
   const [showSetup, setShowSetup] = useState(true)
+  const [restartError, setRestartError] = useState<string | null>(null)
+  const [cancelDestination, setCancelDestination] = useState('/dashboard')
   const [interviewTitle, setInterviewTitle] = useState('AI 모의 면접')
   const [basePose, setBasePose] = useState<{ pitch: number; yaw: number } | null>(null)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const [interviewId, setInterviewId] = useState<number | null>(null)
   const [interviewQuestions, setInterviewQuestions] = useState<InterviewQuestions[]>([])
+  const [restartContext, setRestartContext] = useState<RestartContextInterviewResponse | null>(null)
+
+  const unansweredQuestions = useMemo(() => {
+    return restartContext?.questions
+      .filter((q) => !q.answered)
+      .map((q) => ({
+        questionSetId: q.questionSetId,
+        content: q.content,
+      }))
+  }, [restartContext])
 
   const phaseRef = useRef(phase)
   const currentQuestionRef = useRef(currentQuestion)
@@ -89,6 +102,7 @@ export function useInterview() {
       setInterviewId(config.interviewId)
     }
     setInterviewQuestions(config.questions ?? [])
+    setCurrentQuestion(0)
     setShowSetup(false)
     setTypingKey((prev) => prev + 1)
     setQuestionRevealed(false)
@@ -98,7 +112,7 @@ export function useInterview() {
 
   const handleSetupCancel = () => {
     cleanupInterviewMedia()
-    router.push('/dashboard')
+    router.push(cancelDestination)
   }
 
   const beginAnswering = useCallback(() => {
@@ -266,6 +280,13 @@ export function useInterview() {
     interviewQuestions,
     interviewId,
     setInterviewId,
+    restartContext,
+    setRestartContext,
+    restartError,
+    setRestartError,
+    cancelDestination,
+    setCancelDestination,
+    unansweredQuestions,
     phase,
     timeLeft,
     micOn,

@@ -43,7 +43,7 @@ export function ScoreTrendChart({ weekStart, weekEnd, records }: ScoreTrendChart
       .map((r) => ({
         name: '', // 아래 map에서 회차로 채워짐
         score: r.report?.totalScore || 0,
-        position: r.intvTitle,
+        position: r.title,
         dateObj: new Date(r.updatedAt),
       }))
       .filter((s) => s.dateObj >= weekStart && s.dateObj <= weekEnd)

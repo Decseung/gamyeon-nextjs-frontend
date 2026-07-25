@@ -31,7 +31,6 @@ export function DocumentStep({
   onComplete,
   isUploading,
 }: DocumentStepProps) {
-  // GA4 이벤트 전송 코드 수정 (중복 제거 및 단축키 사용)
   useEffect(() => {
     trackEvent('enter_upload_step', { category: 'interview_setup' })
   }, [])

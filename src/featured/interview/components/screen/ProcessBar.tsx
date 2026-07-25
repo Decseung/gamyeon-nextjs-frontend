@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { Button } from '@/shared/ui/button'
 import { ArrowLeft, Power } from 'lucide-react'
 import type { Phase, InterviewQuestions } from '@/featured/interview/types'
@@ -13,6 +12,7 @@ interface TopBarProps {
   isActive: boolean
   questions: InterviewQuestions[]
   onEndClick: () => void
+  onBackClick: () => void
 }
 
 export function ProcessBar({
@@ -22,6 +22,7 @@ export function ProcessBar({
   isActive,
   questions,
   onEndClick,
+  onBackClick,
 }: TopBarProps) {
   return (
     <header className="relative z-20 flex items-center justify-between border-b border-white/10 bg-slate-900/90 px-4 py-3 backdrop-blur">
@@ -29,12 +30,11 @@ export function ProcessBar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-white/60 hover:bg-white/10 hover:text-white"
-          asChild
+          aria-label="면접 중단"
+          className="h-8 w-8 cursor-pointer text-white/60 hover:bg-white/10 hover:text-white"
+          onClick={onBackClick}
         >
-          <Link href="/dashboard">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+          <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
           <Image

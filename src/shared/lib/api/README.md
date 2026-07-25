@@ -2,13 +2,12 @@
 
 ## 먼저 읽어야 할 핵심 개념
 
-Next.js에서 API를 호출할 수 있는 위치는 두 곳입니다.
+이 프로젝트는 백엔드 호출을 **`serverApi` 하나로 통일**합니다.
+`next/headers`로 쿠키를 읽어 요청하므로 서버 파일(RSC, Server Action, Route Handler)에서만 사용할 수 있습니다.
+클라이언트 컴포넌트에서 import하면 빌드 에러가 납니다.
 
-- **서버** — RSC, Server Action, Route Handler
-- **클라이언트** — `'use client'` 컴포넌트의 이벤트 핸들러, useEffect 등
-
-**이 프로젝트의 원칙: 기본은 서버에서 `serverApi`로 호출한다.**
-클라이언트에서 직접 백엔드를 호출하는 것은 폴링처럼 불가피한 경우에만 허용한다.
+**클라이언트에서 데이터가 필요하면 `serverApi`를 감싼 Server Action을 만들고, 그 Action을 클라이언트에서 호출합니다.**
+반복 조회(폴링)가 필요해도 마찬가지입니다 — TanStack Query의 `refetchInterval`로 폴링 주기를 관리하고, `queryFn` 안에서 Server Action을 호출합니다 (`src/featured/history/hooks/useIntvListQuery.ts` 참고). 클라이언트 전용 fetch 래퍼는 따로 두지 않습니다.
 
 ---
 
@@ -24,9 +23,9 @@ Next.js에서 API를 호출할 수 있는 위치는 두 곳입니다.
 │
 └─ 클라이언트에서 실행되는 코드인가?
     ├─ 폼 제출 / 데이터 변경            → Server Action 만들어서 serverApi 사용
-    ├─ 데이터 조회 (이벤트 기반)         → Route Handler(proxy) 만들어서 serverApi 사용
-    ├─ 폴링 (setInterval 등 반복 요청)  → clientApi 직접 사용
-    └─ S3 등 외부 서비스               → raw fetch 사용 (clientApi/serverApi 불가)
+    ├─ 데이터 조회 (1회성 이벤트 기반)   → Server Action 만들어서 serverApi 사용
+    ├─ 폴링 (반복 조회)                → Server Action + TanStack Query(refetchInterval)
+    └─ S3 등 외부 서비스               → raw fetch 사용 (serverApi 불가, base URL이 고정됨)
 ```
 
 ---
@@ -35,24 +34,19 @@ Next.js에서 API를 호출할 수 있는 위치는 두 곳입니다.
 
 ```
 src/shared/lib/api/
-  types.ts      — 타입 정의 (ApiError, NetworkError 등)
+  types.ts      — 타입 정의 (ApiResponse, NetworkError, RequestConfig 등)
   _utils.ts     — 내부 헬퍼 (직접 사용 X)
-  client.ts     — 내부 fetch 래퍼 (직접 사용 X)
-  clientApi.ts        — clientApi 구현
-  serverApi.ts  — serverApi 구현
+  serverApi.ts  — serverApi 구현 + accessToken 만료 시 재발급 폴백
   index.ts      — 공개 export
 ```
 
-직접 import해서 쓰는 것은 `serverApi`, `clientApi`, `ApiError`뿐입니다.
+직접 import해서 쓰는 것은 `serverApi`와 `ApiResponse` 등 타입뿐입니다.
+
+인증(accessToken/refreshToken) 갱신은 이 레이어의 책임이 아닙니다. 평상시엔 `src/proxy.ts`가 보호 라우트 진입 시점에 accessToken 부재를 감지해 미리 재발급하고, `serverApi`의 재발급 시도는 "요청 도중 만료"처럼 드문 경우의 폴백입니다. 이 레이어를 쓰는 입장에서는 신경 쓸 필요 없이 그냥 `serverApi.get/post/...`를 호출하면 됩니다.
 
 ---
 
-## 1. serverApi — 기본 선택지
-
-`next/headers`로 쿠키를 읽어 백엔드에 요청합니다.
-클라이언트 파일에서 import하면 빌드 에러가 나므로 반드시 서버 파일에서만 사용합니다.
-
-### RSC에서 데이터 패칭
+## 1. RSC에서 데이터 패칭
 
 페이지 진입 시 데이터를 서버에서 미리 가져올 때 사용합니다.
 에러가 나면 가장 가까운 `error.tsx`로 이동합니다.
@@ -62,11 +56,11 @@ src/shared/lib/api/
 import { serverApi } from '@/shared/lib/api'
 
 export default async function InterviewsPage() {
-  const interviews = await serverApi.get<Interview[]>('/interviews')
+  const { data: interviews } = await serverApi.get<Interview[]>('/interviews')
 
   return (
     <ul>
-      {interviews.map((interview) => (
+      {interviews?.map((interview) => (
         <li key={interview.id}>{interview.title}</li>
       ))}
     </ul>
@@ -83,58 +77,53 @@ const [user, interviews] = await Promise.all([
 ])
 ```
 
-### Server Action — 폼 제출 / 데이터 변경
+> ⚠️ `(sidebar)` 그룹처럼 레이아웃이 이미 서버사이드로 데이터를 가져오는 라우트 하위에서, 페이지가 **또다시** 자기 렌더링 도중 `serverApi`/Server Action을 직접 호출하지 않도록 주의합니다. 같은 요청 안에서 인증 갱신이 중복 실행되면서 충돌할 수 있습니다. 클라이언트 컴포넌트 + Server Action 조합(2번 참고)을 쓰면 이 문제 자체가 생기지 않습니다.
 
-클라이언트에서 폼을 제출하거나 데이터를 변경할 때 사용합니다.
+---
+
+## 2. Server Action — 폼 제출 / 데이터 변경 / 클라이언트 데이터 조회
+
+폼 제출, 데이터 변경뿐 아니라 **클라이언트 컴포넌트가 필요로 하는 조회**도 이 방식으로 만듭니다.
 Server Action은 서버에서 실행되므로 `serverApi`를 사용합니다.
 
 **⚠️ Server Action에서 에러를 throw하면 안 되는 이유**
 
-throw하면 에러가 error boundary로 가버려서 `useActionState`로 핸들링할 수 없습니다.
-`redirect()` 같이 내부적으로 throw하는 함수는 예외적으로 반드시 re-throw해야 합니다.
+throw하면 에러가 error boundary로 가버려서 `useActionState`/`useQuery` 등으로 정상적으로 핸들링할 수 없습니다.
+`redirect()` 같이 내부적으로 throw하는 함수는 예외적으로 반드시 re-throw해야 합니다. 공용 헬퍼 `withAction`이 이 처리를 대신해줍니다.
 
 ```ts
-// features/screen/actions.ts
+// features/screen/actions/screen.action.ts
 'use server'
 
 import { serverApi } from '@/shared/lib/api'
-import { isRedirectError } from 'next/dist/client/components/redirect-error'
+import { withAction } from '@/shared/lib/withAction'
+import type { ApiResponse } from '@/shared/lib/api'
+import type { Interview } from '../types'
 
-export async function createInterviewAction(
-  prevState: { success: boolean; message: string } | null,
-  formData: FormData,
-) {
-  const title = formData.get('title') as string
-
-  try {
-    const data = await serverApi.post<Interview>('/interviews', { title })
-    return { success: true as const, message: '면접이 생성되었습니다.', data }
-  } catch (error) {
-    if (isRedirectError(error)) throw error  // redirect는 반드시 re-throw
-    return { success: false as const, message: (error as Error).message }
-  }
+export async function createInterviewAction(title: string): Promise<ApiResponse<Interview>> {
+  return withAction(() => serverApi.post<Interview>('/interviews', { title }))
 }
 ```
 
-클라이언트에서 `useActionState`로 호출합니다.
-`serverApi`를 직접 import하지 않고, action 함수만 가져옵니다.
+### 폼 제출 (useActionState)
 
 ```tsx
-// features/screen/components/CreateForm.tsx
 'use client'
 
 import { useActionState } from 'react'
-import { createInterviewAction } from '../actions'
+import { createInterviewAction } from '../actions/screen.action'
 
 export function CreateForm() {
-  const [state, action, isPending] = useActionState(createInterviewAction, null)
+  const [state, action, isPending] = useActionState(
+    async (_prev: unknown, formData: FormData) =>
+      createInterviewAction(formData.get('title') as string),
+    null,
+  )
 
   return (
     <form action={action}>
       <input name="title" required />
-      {state && !state.success && (
-        <p className="text-destructive text-sm">{state.message}</p>
-      )}
+      {state && !state.success && <p className="text-destructive text-sm">{state.message}</p>}
       <button type="submit" disabled={isPending}>
         {isPending ? '생성 중...' : '생성'}
       </button>
@@ -143,99 +132,37 @@ export function CreateForm() {
 }
 ```
 
-### Route Handler — 클라이언트에서 serverApi가 필요할 때 (proxy)
+### 조회 / 폴링 (TanStack Query)
 
-클라이언트 컴포넌트에서 `serverApi`를 직접 import할 수 없습니다.
-이 경우 Route Handler를 proxy로 만들어 클라이언트가 그 Route Handler를 호출하게 합니다.
-
-Route Handler 내부에서 `serverApi`를 쓰고, 백엔드에서 받은 에러 status를 그대로 클라이언트에 전달합니다.
-
-```ts
-// app/api/interviews/route.ts
-import { serverApi } from '@/shared/lib/api'
-import { isRedirectError } from 'next/dist/client/components/redirect-error'
-import type { ApiError } from '@/shared/lib/api'
-
-export async function GET() {
-  try {
-    const data = await serverApi.get<Interview[]>('/interviews')
-    return Response.json({ success: true, data })
-  } catch (error) {
-    if (isRedirectError(error)) {
-      // Route Handler에서 redirect는 의미 없으므로 401로 변환
-      return Response.json({ success: false, message: '인증이 필요합니다.' }, { status: 401 })
-    }
-    return Response.json(
-      { success: false, message: (error as Error).message },
-      { status: (error as ApiError).status ?? 500 },
-    )
-  }
-}
-```
-
-클라이언트에서 호출합니다.
-
-```ts
-// 클라이언트 컴포넌트에서
-const res = await fetch('/api/interviews')
-const { success, data, message } = await res.json()
-
-if (!success) {
-  console.error(message)
-  return
-}
-// data 사용
-```
-
----
-
-## 2. clientApi — 폴링(반복 요청)에 사용
-
-`setInterval` 등으로 주기적으로 요청을 보내는 경우, Server Action이나 Route Handler를 쓰면 불필요한 오버헤드가 생깁니다.
-이 경우에만 클라이언트에서 `clientApi`로 백엔드에 직접 요청합니다.
+일회성 조회든 반복 폴링이든, 클라이언트 훅이 Server Action을 호출하는 형태로 통일합니다.
+같은 `queryKey`를 쓰는 컴포넌트끼리는 요청이 자동으로 하나로 합쳐집니다 (캐시 공유).
 
 ```tsx
+// features/interview/hooks/useIntvStatusQuery.ts
 'use client'
 
-import { useEffect, useState } from 'react'
-import { clientApi } from '@/shared/lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { getIntvStatusAction } from '../actions/interview.action'
 
-export function intvStatus({ id }: { id: string }) {
-  const [status, setStatus] = useState<string | null>(null)
-
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const data = await clientApi.get<{ status: string }>(`/interviews/${id}/status`)
-        setStatus(data?.status ?? null)
-      } catch {
-        // 에러 toast는 자동으로 표시됨
-      }
-    }
-
-    poll()
-    const timer = setInterval(poll, 3000)  // 3초마다 반복
-    return () => clearInterval(timer)
-  }, [id])
-
-  return <span>{status}</span>
+export function useIntvStatusQuery(id: string) {
+  return useQuery({
+    queryKey: ['intvStatus', id],
+    queryFn: async () => {
+      const res = await getIntvStatusAction(id)
+      if (!res.success) throw new Error(res.message)
+      return res.data
+    },
+    refetchInterval: 3000, // 폴링이 필요 없다면 생략
+  })
 }
 ```
-
-### clientApi 특징
-
-| 기능 | 설명 |
-|---|---|
-| 에러 toast | 에러 발생 시 toast 자동 표시. 끄려면 `{ silent: true }` |
-| 401 자동 처리 | refresh 시도 → 실패하면 `/signin`으로 이동 |
-| base URL | `NEXT_PUBLIC_API_URL` 고정 (변경 불가) |
 
 ---
 
 ## 3. raw fetch — 외부 서비스(S3 등)
 
-`clientApi`/`serverApi` 모두 `NEXT_PUBLIC_API_URL`을 base로 고정하므로 다른 서버에 요청할 수 없습니다.
-S3 등 외부 서비스에 직접 요청할 때는 `fetch`를 그대로 사용합니다.
+`serverApi`는 `NEXT_PUBLIC_API_URL`을 base로 고정하므로 다른 서버에 요청할 수 없습니다.
+S3 presigned URL 등 외부 서비스에 직접 요청할 때는 `fetch`를 그대로 사용합니다.
 
 ```ts
 // presigned URL로 S3에 직접 업로드
@@ -250,37 +177,29 @@ await fetch(presignedUrl, {
 
 ## 에러 처리
 
-### 에러 타입
+`serverApi`는 실패 시 두 가지 중 하나를 throw합니다.
 
 ```ts
-error.status   // HTTP 상태코드 (400, 401, 403, 500 ...)
-error.code     // 서버 에러 코드 ('USER-E001', 'CMMN-A001' ...)
-error.message  // 에러 메시지 (clientApi에서는 toast에 자동 표시)
-error.errors   // 필드별 에러 배열 [{ field, reason }] — 폼 검증 시 사용
+// 1) 네트워크 자체가 끊긴 경우
+NetworkError { message: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
 
-// 네트워크 자체가 끊긴 경우
-error.status   // 0
-error.code     // 'NETWORK_ERROR'
+// 2) 백엔드가 success: false로 응답한 경우 — ApiResponse와 동일한 모양의 객체
+{ success: false, code: 'USER-E001', message: '...', data: null, errors: [...] | null }
 ```
 
-### 에러 코드로 분기
+HTTP status는 별도로 노출되지 않습니다. 분기는 `code`로 합니다.
 
 ```ts
-import type { ApiError } from '@/shared/lib/api'
+import type { ApiResponse } from '@/shared/lib/api'
 
 try {
-  await clientApi.post('/auth/login', { email, password })
+  return await withAction(() => serverApi.post<User>('/auth/login', { email, password }))
 } catch (err) {
-  const error = err as ApiError
-
+  const error = err as ApiResponse<null>
   if (error.code === 'USER-E001') {
-    setMessage('존재하지 않는 계정입니다.')
-    return
+    return { success: false as const, message: '존재하지 않는 계정입니다.' }
   }
-  if (error.status === 429) {
-    setMessage('잠시 후 다시 시도해주세요.')
-    return
-  }
+  throw err
 }
 ```
 
@@ -288,14 +207,12 @@ try {
 
 ```ts
 try {
-  await clientApi.post('/auth/signup', { email, password })
+  await serverApi.post('/auth/signup', { email, password })
 } catch (err) {
-  const error = err as ApiError
-
+  const error = err as ApiResponse<null>
   // error.errors = [{ field: 'email', reason: '이미 사용 중인 이메일입니다.' }, ...]
   error.errors?.forEach((e) => {
-    if (e.field === 'email') setEmailError(e.reason)
-    if (e.field === 'password') setPasswordError(e.reason)
+    // 필드별 에러 메시지 처리
   })
 }
 ```
@@ -306,11 +223,10 @@ try {
 
 ```ts
 {
-  silent?: boolean    // true이면 에러 toast를 띄우지 않음 (기본: false, clientApi에서만 유효)
   params?: object     // URL 쿼리 파라미터 → /path?key=value 형태로 자동 변환
   headers?: object    // 추가 헤더
   cache?: RequestCache           // fetch 캐시 전략
-  next?: NextFetchRequestConfig  // Next.js ISR revalidate 등 (serverApi에서만 유효)
+  next?: NextFetchRequestConfig  // Next.js ISR revalidate 등
 }
 ```
 
@@ -323,7 +239,7 @@ const list = await serverApi.get<InterviewList>('/interviews', {
 })
 ```
 
-### Next.js 캐싱 / ISR (serverApi 전용)
+### Next.js 캐싱 / ISR
 
 ```ts
 // 항상 최신 데이터 (캐시 비활성화)
@@ -342,28 +258,22 @@ const data = await serverApi.get('/interviews', { next: { tags: ['interviews'] }
 
 ```ts
 // ✅ RSC — 서버에서 직접 데이터 패칭
-const data = await serverApi.get<T>('/path')
+const { data } = await serverApi.get<T>('/path')
 
-// ✅ Server Action — try/catch + return, throw 금지 (redirect는 예외)
-try {
-  const data = await serverApi.post('/path', body)
-  return { success: true, data }
-} catch (error) {
-  if (isRedirectError(error)) throw error
-  return { success: false, message: (error as Error).message }
+// ✅ Server Action — withAction으로 감싸서 반환, throw 금지 (redirect는 예외)
+export async function doThingAction(): Promise<ApiResponse<T>> {
+  return withAction(() => serverApi.post<T>('/path', body))
 }
 
-// ✅ Route Handler proxy — 백엔드 status 그대로 전달
-try {
-  const data = await serverApi.get('/path')
-  return Response.json({ success: true, data })
-} catch (error) {
-  if (isRedirectError(error)) return Response.json({ success: false }, { status: 401 })
-  return Response.json({ success: false }, { status: (error as ApiError).status ?? 500 })
-}
-
-// ✅ 폴링 — clientApi 직접 사용
-const data = await clientApi.get<T>('/path')
+// ✅ 클라이언트 조회/폴링 — Server Action + TanStack Query
+const { data } = useQuery({
+  queryKey: ['thing'],
+  queryFn: async () => {
+    const res = await doThingAction()
+    if (!res.success) throw new Error(res.message)
+    return res.data
+  },
+})
 
 // ✅ 외부 서비스 — raw fetch
 await fetch(externalUrl, { method: 'PUT', body: file })
