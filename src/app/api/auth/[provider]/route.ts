@@ -53,8 +53,6 @@ export async function POST(
     })
 
     const data = await res.json()
-    console.log(`[auth/${provider}] status: ${res.status}, body:`, JSON.stringify(data, null, 2))
-    console.log(`[auth/${provider}] Set-Cookie headers:`, res.headers.getSetCookie())
 
     if (!data.success) {
       data.message = '로그인 인증에 실패했습니다.'

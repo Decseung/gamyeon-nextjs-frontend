@@ -7,16 +7,24 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isLoggedIn: false,
+      isSessionVerified: false,
       signin: (user: User) => {
-        set({ user, isLoggedIn: true })
+        set({ user, isLoggedIn: true, isSessionVerified: true })
+      },
+      restoreSession: (user: User) => {
+        set({ user, isLoggedIn: true, isSessionVerified: true })
       },
       logout: () => {
-        set({ user: null, isLoggedIn: false })
+        set({ user: null, isLoggedIn: false, isSessionVerified: false })
       },
     }),
     {
       name: 'ai-interview-user',
       storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        user: state.user,
+        isLoggedIn: state.isLoggedIn,
+      }),
     },
   ),
 )
