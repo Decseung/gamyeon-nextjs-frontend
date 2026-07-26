@@ -16,6 +16,19 @@ const initialNotifState = {
   isLoadingMore: false,
 }
 
+function mergeNotifsByCreatedAt(apiNotifs: Notif[], currentNotifs: Notif[]): Notif[] {
+  const notifById = new Map(apiNotifs.map((notif) => [notif.notifId, notif]))
+
+  for (const notif of currentNotifs) {
+    notifById.set(notif.notifId, notif)
+  }
+
+  return Array.from(notifById.values()).sort((a, b) => {
+    const createdAtDiff = Date.parse(b.createdAt) - Date.parse(a.createdAt)
+    return createdAtDiff || b.notifId - a.notifId
+  })
+}
+
 /**
  * 알림 드롭다운과 SSE 수신 결과가 함께 사용하는 전역 상태.
  * 목록은 최신순으로 유지하며, 다음 페이지는 마지막 notifId를 cursorId로 요청한다.
@@ -33,14 +46,14 @@ export const useNotifStore = create<NotifState>((set, get) => ({
       const data = response.data
       const notifs = data?.notifs ?? []
 
-      set({
-        notifs,
+      set((state) => ({
+        notifs: mergeNotifsByCreatedAt(notifs, state.notifs),
         unreadCount: data?.unreadCount ?? 0,
         nextCursorId: notifs.at(-1)?.notifId ?? null,
         hasMore: data?.hasNext ?? notifs.length === DEFAULT_NOTIF_PAGE_SIZE,
         isLoading: false,
         isLoadingMore: false,
-      })
+      }))
     } catch (error) {
       set({ isLoading: false })
       throw error
