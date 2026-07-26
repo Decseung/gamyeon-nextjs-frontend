@@ -68,7 +68,7 @@ export function subscribeNotifs({
   const controller = new AbortController()
   activeController = controller
 
-  let hasConnected = false
+  let hasConnectedForCurrentConnection = false
   let hasHandledUnauthorized = false
 
   const cleanup = () => {
@@ -90,6 +90,8 @@ export function subscribeNotifs({
     signal: controller.signal,
     openWhenHidden: true,
     async onopen(response) {
+      if (controller.signal.aborted) return
+
       if (response.status === 401) {
         cleanup()
 
@@ -108,11 +110,15 @@ export function subscribeNotifs({
       if (!response.ok || !contentType?.startsWith(EventStreamContentType)) {
         throw new Error(`알림 SSE 연결에 실패했습니다. (HTTP ${response.status})`)
       }
+
+      hasConnectedForCurrentConnection = false
     },
     onmessage(event) {
+      if (controller.signal.aborted) return
+
       if (event.event === 'connect') {
-        if (event.data === 'connected' && !hasConnected) {
-          hasConnected = true
+        if (event.data === 'connected' && !hasConnectedForCurrentConnection) {
+          hasConnectedForCurrentConnection = true
           onConnected?.()
         }
         return
