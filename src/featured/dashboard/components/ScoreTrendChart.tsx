@@ -13,6 +13,8 @@ import {
 import { Inbox } from 'lucide-react'
 import { ChartDataItem, CustomTooltipProps, ScoreTrendChartProps } from '../types'
 
+const INITIAL_CHART_DIMENSION = { width: 320, height: 140 }
+
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload?.length) return null
   const { position, score } = payload[0].payload
@@ -72,7 +74,11 @@ export function ScoreTrendChart({ weekStart, weekEnd, records }: ScoreTrendChart
         </div>
       ) : (
         <div className="absolute inset-0">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            initialDimension={INITIAL_CHART_DIMENSION}
+          >
             <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
