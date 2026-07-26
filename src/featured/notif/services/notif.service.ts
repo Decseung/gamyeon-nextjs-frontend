@@ -1,5 +1,5 @@
-import { clientApi } from '@/shared/lib/api'
-import type { ApiResponse } from '@/shared/lib/api'
+import { clientApi } from '@/shared/lib/api/clientApi'
+import type { ApiResponse } from '@/shared/lib/api/types'
 import type { GetNotifsParams, NotifListData } from '../types'
 
 const NOTIF_ENDPOINT = '/api/v1/notifs'
