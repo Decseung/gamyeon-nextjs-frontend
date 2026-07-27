@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CircleUserRound } from 'lucide-react'
+import { CircleUserRound, SquarePen } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -91,20 +91,53 @@ function SocialProviderIcon({ provider }: SocialProviderIconProps) {
 
 function NicknameEditor({ initialNickname }: NicknameEditorProps) {
   const [nickname, setNickname] = useState(initialNickname)
+  const [isEditing, setIsEditing] = useState(false)
+
+  const cancelEditing = () => {
+    setNickname(initialNickname)
+    setIsEditing(false)
+  }
+
+  if (!isEditing) {
+    return (
+      <>
+        <span className="min-w-0 flex-1 truncate text-sm">{initialNickname || '-'}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setIsEditing(true)}
+          aria-label="닉네임 수정"
+          title="닉네임 수정"
+        >
+          <SquarePen aria-hidden="true" />
+        </Button>
+      </>
+    )
+  }
 
   return (
-    <>
+    <div className="flex min-w-0 flex-1 items-center gap-2">
       <Input
+        autoFocus
         value={nickname}
         onChange={(e) => setNickname(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            cancelEditing()
+          }
+        }}
         placeholder="닉네임"
         className="h-9"
         aria-label="닉네임"
       />
-      <Button size="sm" disabled>
+      <Button type="button" size="sm" disabled>
         저장
       </Button>
-    </>
+      <Button type="button" variant="outline" size="sm" onClick={cancelEditing}>
+        취소
+      </Button>
+    </div>
   )
 }
 

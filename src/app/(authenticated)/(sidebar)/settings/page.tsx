@@ -12,8 +12,8 @@ export default function SettingsPage() {
     <>
       <SettingsHeader />
       <div className="mx-auto grid w-full max-w-2xl grid-cols-1 items-start gap-6 p-6 sm:p-8 lg:grid-cols-1">
-        <GeneralCard />
         <AccountCard />
+        <GeneralCard />
       </div>
     </>
   )

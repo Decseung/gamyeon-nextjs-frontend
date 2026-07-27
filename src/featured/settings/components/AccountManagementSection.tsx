@@ -44,7 +44,11 @@ export function AccountManagementSection() {
       <SettingsRow label="회원 탈퇴" description="계정과 모든 면접 기록이 삭제됩니다.">
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="secondary" size="sm" className="cursor-pointer">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="cursor-pointer bg-gray-200 text-gray-500 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            >
               회원 탈퇴
             </Button>
           </DialogTrigger>
