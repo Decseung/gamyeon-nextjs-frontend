@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { TooltipProvider } from '@/shared/ui/tooltip'
 import ReactQueryProvider from '@/shared/lib/ReactQueryProvider'
-import { Toaster } from 'sonner'
+import { ThemeProvider } from '@/shared/lib/ThemeProvider'
+import { Toaster } from '@/shared/ui/sonner'
 import './globals.css'
 import { GoogleAnalytics } from '@next/third-parties/google'
 import ClarityProvider from '@/shared/lib/ClarityProvider'
@@ -60,20 +61,27 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <GoogleAnalytics
-          gaId={process.env.NEXT_PUBLIC_GA_ID || ''}
-          debugMode={process.env.NODE_ENV === 'development'}
-        />
-        <ClarityProvider clarityId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || ''} />
-        <ReactQueryProvider>
-          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-        </ReactQueryProvider>
-        <Toaster richColors position="top-right" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <GoogleAnalytics
+            gaId={process.env.NEXT_PUBLIC_GA_ID || ''}
+            debugMode={process.env.NODE_ENV === 'development'}
+          />
+          <ClarityProvider clarityId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || ''} />
+          <ReactQueryProvider>
+            <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+          </ReactQueryProvider>
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   )

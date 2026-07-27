@@ -12,15 +12,12 @@ export const SETTINGS_COPY = {
   appearanceTitle: '화면',
   notificationTitle: '알림',
   localOnlyNotice: '알림 설정은 현재 기기에만 저장됩니다.',
-  nicknamePending: '닉네임 변경은 곧 제공될 예정입니다.',
-  themePending: '테마 변경은 곧 제공될 예정입니다.',
   withdrawPendingToast: '회원 탈퇴 기능은 준비 중입니다.',
 } as const
 
 export const THEME_OPTIONS: ThemeOption[] = [
   { value: 'light', label: '라이트' },
   { value: 'dark', label: '다크' },
-  { value: 'system', label: '시스템' },
 ]
 
 export const SETTINGS_STORAGE_KEY = 'gamyeon-settings'

@@ -6,7 +6,7 @@ export interface SettingsState extends NotificationSettings {
   setNotificationEnabled: (enabled: boolean) => void
 }
 
-export type ThemeValue = 'light' | 'dark' | 'system'
+export type ThemeValue = 'light' | 'dark'
 
 export interface ThemeOption {
   value: ThemeValue
