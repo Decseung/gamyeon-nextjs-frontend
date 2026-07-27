@@ -116,7 +116,9 @@ export function useSetupModal({ session, isRestart }: UseSetupModalParams) {
         await startInterviewAction(session.interviewId)
       }
     }
+
     trackEvent('start_interview', { category: 'interview_setup' })
+
     session.handleSetupComplete({
       title: titleStep.title.trim() || '모의 면접',
       basePose: cameraHandler.basePose,
