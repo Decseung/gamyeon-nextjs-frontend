@@ -1,10 +1,9 @@
 import { create } from 'zustand'
 import {
-  DEFAULT_NOTIF_PAGE_SIZE,
-  getNotifs,
-  markAllNotifsAsRead,
-  markNotifAsRead,
-} from './services/notif.service'
+  getNotifsAction,
+  markAllNotifsAsReadAction,
+  markNotifAsReadAction,
+} from './actions/notif.action'
 import type { Notif, NotifState } from './types'
 
 const initialNotifState = {
@@ -42,7 +41,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
     set({ isLoading: true })
 
     try {
-      const response = await getNotifs()
+      const response = await getNotifsAction()
       const data = response.data
       const notifs = data?.notifs ?? []
 
@@ -50,7 +49,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
         notifs: mergeNotifsByCreatedAt(notifs, state.notifs),
         unreadCount: data?.unreadCount ?? 0,
         nextCursorId: notifs.at(-1)?.notifId ?? null,
-        hasMore: data?.hasNext ?? notifs.length === DEFAULT_NOTIF_PAGE_SIZE,
+        hasMore: data?.hasNext ?? false,
         isLoading: false,
         isLoadingMore: false,
       }))
@@ -68,7 +67,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
     set({ isLoadingMore: true })
 
     try {
-      const response = await getNotifs({ cursorId: nextCursorId })
+      const response = await getNotifsAction({ cursorId: nextCursorId })
       const data = response.data
       const incomingNotifs = data?.notifs ?? []
 
@@ -80,7 +79,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
         return {
           notifs: mergedNotifs,
           nextCursorId: incomingNotifs.at(-1)?.notifId ?? state.nextCursorId,
-          hasMore: data?.hasNext ?? incomingNotifs.length === DEFAULT_NOTIF_PAGE_SIZE,
+          hasMore: data?.hasNext ?? false,
           isLoadingMore: false,
         }
       })
@@ -109,7 +108,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
 
     if (!targetNotif || targetNotif.isRead) return
 
-    await markNotifAsRead(notifId)
+    await markNotifAsReadAction(notifId)
 
     set((state) => {
       const currentNotif = state.notifs.find((notif) => notif.notifId === notifId)
@@ -126,7 +125,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
   },
 
   markAllAsRead: async () => {
-    await markAllNotifsAsRead()
+    await markAllNotifsAsReadAction()
 
     set((state) => ({
       notifs: state.notifs.map((notif) => ({ ...notif, isRead: true })),
