@@ -126,7 +126,14 @@ export function useSetupModal({ session, isRestart }: UseSetupModalParams) {
       interviewId: session.interviewId,
       questions: activeQuestions ?? [],
     })
-  }, [cameraHandler, session, isRestart, titleStep.title, activeQuestions])
+  }, [
+    cameraHandler.cameraStream,
+    cameraHandler.basePose,
+    session,
+    isRestart,
+    titleStep.title,
+    activeQuestions,
+  ])
 
   const isStartDisabled =
     !allDone ||

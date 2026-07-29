@@ -14,16 +14,50 @@ export function InterviewContainer({ session }: InterviewPageProps) {
   const currentQuestionSetId =
     session.interviewQuestions[session.currentQuestion]?.questionSetId ?? null
 
+  const currentQuestionOrder =
+    session.interviewQuestions[session.currentQuestion]?.questionOrder ?? 0
+
   const handleStopRequest = () => session.setShowEndDialog(true)
+
+  const processBarQuestions = session.restartContext
+    ? session.restartContext.questions
+        .slice()
+        .sort((a, b) => a.questionOrder - b.questionOrder)
+        .map((q) => {
+          const answeredInCurrentSession = session.interviewQuestions
+            .slice(0, session.currentQuestion)
+            .some((iq) => iq.questionSetId === q.questionSetId)
+          const isCurrentQuestion =
+            session.interviewQuestions[session.currentQuestion]?.questionSetId === q.questionSetId
+          return {
+            questionSetId: q.questionSetId,
+            questionOrder: q.questionOrder,
+            status:
+              q.answered || answeredInCurrentSession
+                ? ('completed' as const)
+                : isCurrentQuestion && session.isActive
+                  ? ('active' as const)
+                  : ('pending' as const),
+          }
+        })
+    : session.interviewQuestions.map((q, i) => ({
+        questionSetId: q.questionSetId,
+        questionOrder: q.questionOrder,
+        status:
+          i < session.currentQuestion
+            ? ('completed' as const)
+            : i === session.currentQuestion && session.isActive
+              ? ('active' as const)
+              : ('pending' as const),
+      }))
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-slate-950 text-white">
       <ProcessBar
         interviewTitle={session.interviewTitle}
-        currentQuestion={session.currentQuestion}
+        currentQuestionOrder={currentQuestionOrder}
         phase={session.phase}
-        isActive={session.isActive}
-        questions={session.interviewQuestions}
+        questions={processBarQuestions}
         onEndClick={handleStopRequest}
         onBackClick={handleStopRequest}
       />
