@@ -111,6 +111,7 @@ export interface CompleteFileUploadResponse {
 export interface InterviewQuestions {
   questionSetId: number
   content: string
+  questionOrder: number
 }
 
 export interface GetInterviewQuestionsResponse {

@@ -2,24 +2,29 @@
 
 import { Button } from '@/shared/ui/button'
 import { ArrowLeft, Power } from 'lucide-react'
-import type { Phase, InterviewQuestions } from '@/featured/interview/types'
+import type { Phase } from '@/featured/interview/types'
+import { TOTAL_QUESTION_COUNT } from '@/featured/interview/constants'
 import Image from 'next/image'
+
+interface ProcessBarQuestion {
+  questionSetId: number
+  questionOrder: number
+  status: 'completed' | 'active' | 'pending'
+}
 
 interface TopBarProps {
   interviewTitle: string
-  currentQuestion: number
+  currentQuestionOrder: number
   phase: Phase
-  isActive: boolean
-  questions: InterviewQuestions[]
+  questions: ProcessBarQuestion[]
   onEndClick: () => void
   onBackClick: () => void
 }
 
 export function ProcessBar({
   interviewTitle,
-  currentQuestion,
+  currentQuestionOrder,
   phase,
-  isActive,
   questions,
   onEndClick,
   onBackClick,
@@ -49,20 +54,20 @@ export function ProcessBar({
       </div>
 
       <div className="flex items-center gap-1.5">
-        {questions.map((_, i) => (
+        {questions.map((q) => (
           <div
-            key={i}
+            key={q.questionSetId}
             className={`h-2 rounded-full transition-all duration-300 ${
-              i < currentQuestion
+              q.status === 'completed'
                 ? 'w-2 bg-green-500'
-                : i === currentQuestion && isActive
+                : q.status === 'active'
                   ? 'bg-primary w-5'
                   : 'w-2 bg-white/20'
             }`}
           />
         ))}
         <span className="ml-2 text-xs text-white/50">
-          {currentQuestion + 1} / {questions.length}
+          {currentQuestionOrder} / {TOTAL_QUESTION_COUNT}
         </span>
       </div>
 

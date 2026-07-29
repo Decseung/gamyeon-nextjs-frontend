@@ -1,6 +1,12 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/featured/auth/services/auth.service'
+import type { User } from '@/featured/auth/types'
+
+export async function verifyCurrentUser(): Promise<User> {
+  return getCurrentUser()
+}
 
 /**
  * 로그아웃 Server Action.
