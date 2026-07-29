@@ -123,9 +123,11 @@ export function Header() {
                       대시보드
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-2">
-                    <Settings className="h-4 w-4" />
-                    설정
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="cursor-pointer gap-2">
+                      <Settings className="h-4 w-4" />
+                      설정
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
