@@ -231,11 +231,9 @@ function NicknameEditor({ initialNickname }: NicknameEditorProps) {
       >
         취소
       </Button>
-      {errorMessage && (
-        <p id={errorId} role="alert" className="text-destructive basis-full text-xs">
-          {errorMessage}
-        </p>
-      )}
+      <p id={errorId} role="alert" className="text-destructive min-h-4 basis-full text-xs">
+        {errorMessage}
+      </p>
     </form>
   )
 }
@@ -249,14 +247,14 @@ export function ProfileSection() {
   return (
     <section className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold">{SETTINGS_COPY.profileTitle}</h3>
-      <div className="flex items-center gap-3">
+      <div className="flex min-h-[4.25rem] items-start gap-3">
         <Avatar className="h-12 w-12">
           {user?.avatar && <AvatarImage src={user.avatar} alt={user.nickname} />}
           <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="mt-2 flex min-w-0 flex-1 items-center gap-2">
           <NicknameEditor key={nicknameEditorKey} initialNickname={user?.nickname ?? ''} />
         </div>
       </div>
