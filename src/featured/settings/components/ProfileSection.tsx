@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { CircleUserRound, SquarePen } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { useAuthStore } from '@/featured/auth/store'
-import { SETTINGS_COPY } from '../constants'
+import { updateNicknameAction } from '../actions/settings.action'
+import { NICKNAME_PATTERN, SETTINGS_COPY } from '../constants'
+import type { NicknameUpdateData } from '../types'
 import { SettingsRow } from './SettingsRow'
 
 interface NicknameEditorProps {
@@ -15,6 +17,23 @@ interface NicknameEditorProps {
 
 interface SocialProviderIconProps {
   provider: string
+}
+
+function isValidNickname(nickname: string): boolean {
+  return NICKNAME_PATTERN.test(nickname)
+}
+
+function isNicknameUpdateData(data: unknown): data is NicknameUpdateData {
+  if (data === null || typeof data !== 'object') return false
+
+  const value = data as Record<string, unknown>
+  return (
+    typeof value.id === 'number' &&
+    Number.isInteger(value.id) &&
+    value.id > 0 &&
+    typeof value.nickname === 'string' &&
+    isValidNickname(value.nickname)
+  )
 }
 
 function GoogleIcon() {
@@ -92,10 +111,63 @@ function SocialProviderIcon({ provider }: SocialProviderIconProps) {
 function NicknameEditor({ initialNickname }: NicknameEditorProps) {
   const [nickname, setNickname] = useState(initialNickname)
   const [isEditing, setIsEditing] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
+  const submissionLockRef = useRef(false)
+  const errorId = useId()
+  const updateNicknameInStore = useAuthStore((state) => state.updateNickname)
+
+  const isNicknameValid = isValidNickname(nickname)
+  const isNicknameUnchanged = nickname === initialNickname
+  const validationError = isNicknameValid
+    ? null
+    : '닉네임은 1~8자의 한글, 영문, 숫자만 입력해 주세요.'
+  const errorMessage = serverError ?? validationError
+  const isSaveDisabled = isSubmitting || !isNicknameValid || isNicknameUnchanged
 
   const cancelEditing = () => {
+    if (submissionLockRef.current) return
+
     setNickname(initialNickname)
+    setServerError(null)
     setIsEditing(false)
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (submissionLockRef.current || isSaveDisabled) return
+
+    submissionLockRef.current = true
+    setIsSubmitting(true)
+    setServerError(null)
+
+    try {
+      const result = await updateNicknameAction(nickname)
+
+      if (result.success) {
+        if (!isNicknameUpdateData(result.data)) {
+          const message = '닉네임 수정 결과를 확인하지 못했습니다.'
+          setServerError(message)
+          return
+        }
+
+        const updated = updateNicknameInStore(result.data.id, result.data.nickname)
+        if (!updated) return
+
+        setIsEditing(false)
+        return
+      }
+
+      const nicknameError = result.errors?.find((error) => error.field === 'nickname')?.reason
+      setServerError(nicknameError ?? result.message)
+    } catch {
+      const message = '닉네임 수정 중 오류가 발생했습니다.'
+      setServerError(message)
+    } finally {
+      submissionLockRef.current = false
+      setIsSubmitting(false)
+    }
   }
 
   if (!isEditing) {
@@ -106,7 +178,11 @@ function NicknameEditor({ initialNickname }: NicknameEditorProps) {
           type="button"
           variant="ghost"
           size="icon-sm"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            setNickname(initialNickname)
+            setServerError(null)
+            setIsEditing(true)
+          }}
           aria-label="닉네임 수정"
           title="닉네임 수정"
         >
@@ -117,27 +193,50 @@ function NicknameEditor({ initialNickname }: NicknameEditorProps) {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <form className="flex min-w-0 flex-1 flex-wrap items-center gap-2" onSubmit={handleSubmit}>
       <Input
         autoFocus
         value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
+        onChange={(event) => {
+          setNickname(event.target.value)
+          setServerError(null)
+        }}
         onKeyDown={(e) => {
+          if (e.key === 'Enter' && e.nativeEvent.isComposing) {
+            e.preventDefault()
+            return
+          }
+
           if (e.key === 'Escape') {
             cancelEditing()
           }
         }}
+        maxLength={8}
+        disabled={isSubmitting}
         placeholder="닉네임"
-        className="h-9"
+        className="h-9 min-w-0 flex-1"
         aria-label="닉네임"
+        aria-invalid={Boolean(errorMessage)}
+        aria-describedby={errorMessage ? errorId : undefined}
       />
-      <Button type="button" size="sm" disabled>
-        저장
+      <Button type="submit" size="sm" disabled={isSaveDisabled}>
+        {isSubmitting ? '저장 중...' : '저장'}
       </Button>
-      <Button type="button" variant="outline" size="sm" onClick={cancelEditing}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={cancelEditing}
+        disabled={isSubmitting}
+      >
         취소
       </Button>
-    </div>
+      {errorMessage && (
+        <p id={errorId} role="alert" className="text-destructive basis-full text-xs">
+          {errorMessage}
+        </p>
+      )}
+    </form>
   )
 }
 

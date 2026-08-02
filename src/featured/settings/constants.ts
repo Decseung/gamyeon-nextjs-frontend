@@ -21,3 +21,5 @@ export const THEME_OPTIONS: ThemeOption[] = [
 ]
 
 export const SETTINGS_STORAGE_KEY = 'gamyeon-settings'
+
+export const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{1,8}$/

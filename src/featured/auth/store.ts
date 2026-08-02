@@ -14,6 +14,25 @@ export const useAuthStore = create<AuthState>()(
       restoreSession: (user: User) => {
         set({ user, isLoggedIn: true, isSessionVerified: true })
       },
+      updateNickname: (userId: number, nickname: string) => {
+        let updated = false
+
+        set((state) => {
+          if (!state.isLoggedIn || !state.user || state.user.id !== userId) {
+            return state
+          }
+
+          updated = true
+          return {
+            user: {
+              ...state.user,
+              nickname,
+            },
+          }
+        })
+
+        return updated
+      },
       logout: () => {
         set({ user: null, isLoggedIn: false, isSessionVerified: false })
       },
