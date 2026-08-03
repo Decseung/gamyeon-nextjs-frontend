@@ -145,11 +145,15 @@ export function useSigninFlow() {
     window.location.href = `${process.env.NEXT_PUBLIC_GOOGLE_AUTH_URL}?${params.toString()}`
   }
 
-  const clearRestoreUser = () => setRestoreUser(null)
+  const clearRestoreUser = () => {
+    setRestoreUser(null)
+    setErrorMessage(null)
+  }
 
   const handleRestore = async () => {
     if (!restoreUser) return
     setIsRestoring(true)
+    setErrorMessage(null)
 
     try {
       const res = await fetch('/api/auth/restore', {
