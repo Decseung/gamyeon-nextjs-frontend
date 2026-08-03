@@ -11,7 +11,17 @@ import Image from 'next/image'
 import { useSigninFlow } from '@/featured/auth/hooks/useSigninFlow'
 
 export function SigninForm() {
-  const { status, provider, errorMessage, handleKakaoLogin, handleGoogleLogin } = useSigninFlow()
+  const {
+    status,
+    provider,
+    errorMessage,
+    restoreUser,
+    isRestoring,
+    clearRestoreUser,
+    handleRestore,
+    handleKakaoLogin,
+    handleGoogleLogin,
+  } = useSigninFlow()
 
   if (status === 'loading') {
     if (!provider) return null
@@ -88,6 +98,46 @@ export function SigninForm() {
 
   return (
     <div className="bg-muted/20 flex min-h-screen items-center justify-center px-4">
+      {restoreUser && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="bg-background w-full max-w-sm rounded-2xl p-6 shadow-xl"
+          >
+            <h2 className="text-foreground mb-1 text-center text-base font-semibold">
+              탈퇴한 계정을 복구하시겠습니까?
+            </h2>
+            <p className="text-muted-foreground mb-6 text-center text-sm">
+              {restoreUser.user.email}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 cursor-pointer"
+                disabled={isRestoring}
+                onClick={clearRestoreUser}
+              >
+                취소
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 cursor-pointer"
+                disabled={isRestoring}
+                onClick={handleRestore}
+              >
+                {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : '복구'}
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -142,7 +192,6 @@ export function SigninForm() {
             )}
 
             <div className="flex flex-col gap-2.5">
-              {/* 카카오 로그인 버튼 */}
               <Button
                 type="button"
                 className="w-full cursor-pointer gap-2.5 bg-[#FEE500] py-6 font-medium text-[#3C1E1E] transition-colors hover:bg-[#F0D900] active:bg-[#E8CF00]"
@@ -151,8 +200,6 @@ export function SigninForm() {
                 <ProviderIcon provider="kakao" className="h-5 w-5 shrink-0" />
                 카카오로 시작하기
               </Button>
-
-              {/* 구글 로그인 버튼 */}
               <Button
                 type="button"
                 variant="outline"
