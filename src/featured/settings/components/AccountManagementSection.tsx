@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogClose,
@@ -16,10 +18,24 @@ import {
 import { Button } from '@/shared/ui/button'
 import { SETTINGS_COPY } from '../constants'
 import { SettingsRow } from './SettingsRow'
+import { withdrawUserAction } from '@/featured/auth/actions/auth.action'
+import { useAuthStore } from '@/featured/auth/store'
 
 export function AccountManagementSection() {
-  const handleWithdraw = () => {
-    toast.info(SETTINGS_COPY.withdrawPendingToast)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const { logout: clearAuthStore } = useAuthStore()
+  const router = useRouter()
+
+  const handleWithdraw = async () => {
+    setIsWithdrawing(true)
+    const result = await withdrawUserAction()
+    if (result.success) {
+      clearAuthStore()
+      router.push('/signin')
+    } else {
+      toast.error(result.message ?? '회원 탈퇴에 실패했습니다.')
+      setIsWithdrawing(false)
+    }
   }
 
   return (
@@ -65,11 +81,14 @@ export function AccountManagementSection() {
                   취소
                 </Button>
               </DialogClose>
-              <DialogClose asChild>
-                <Button variant="destructive" className="cursor-pointer" onClick={handleWithdraw}>
-                  탈퇴하기
-                </Button>
-              </DialogClose>
+              <Button
+                variant="destructive"
+                className="cursor-pointer"
+                disabled={isWithdrawing}
+                onClick={handleWithdraw}
+              >
+                {isWithdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : '탈퇴하기'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -12,3 +12,7 @@ export async function getCurrentUser(): Promise<User> {
 
   return response.data
 }
+
+export async function withdrawUser(): Promise<void> {
+  await serverApi.delete('/api/v1/auth/me')
+}
