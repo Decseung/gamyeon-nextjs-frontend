@@ -72,7 +72,9 @@ export function AccountManagementSection() {
             <DialogHeader>
               <DialogTitle>정말 탈퇴하시겠어요?</DialogTitle>
               <DialogDescription>
-                탈퇴하면 계정 정보와 모든 면접 기록·리포트가 삭제되며 복구할 수 없습니다.
+                탈퇴 시 계정 정보와 모든 면접 기록·리포트가 삭제됩니다.
+                <br /> 탈퇴 후 7일간은 계정 복구가 가능하며, 이 기간이 지나면 모든 데이터가
+                영구적으로 삭제되어 복구할 수 없습니다.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
