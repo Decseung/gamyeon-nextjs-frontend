@@ -5,7 +5,6 @@ export interface User {
   provider: string
   status: string
   createdAt: string
-  // Kept for compatibility with OAuth providers that include profile metadata.
   name?: string
   avatar?: string
 }
@@ -23,5 +22,13 @@ export interface AuthState {
 export interface OAuthLoginData {
   accessToken: string
   refreshToken: string
-  user: User
+  user: User | null
+  restoreToken: string | null
+  restorableUntil: string | null
+}
+
+export interface RestoreUser {
+  restoreToken: string
+  restorableUntil: string
+  user: User | null
 }

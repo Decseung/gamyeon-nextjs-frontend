@@ -60,7 +60,7 @@ export async function POST(
 
     const response = NextResponse.json(data, { status: res.status })
 
-    if (data.success && data.data) {
+    if (data.success && data.data && data.data.accessToken) {
       const expiresMap = buildTokenExpiresMap(
         data.data.accessToken,
         data.data.refreshToken,

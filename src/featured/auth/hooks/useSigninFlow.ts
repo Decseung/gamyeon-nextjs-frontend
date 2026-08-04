@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/featured/auth/store'
-import type { OAuthLoginData } from '@/featured/auth/types'
+import type { OAuthLoginData, RestoreUser } from '@/featured/auth/types'
 import type { ApiResponse } from '@/shared/lib/api/types'
 import type { OAuthProvider } from '@/shared/ui/provider-icon'
 import { generateCodeChallenge, generateCodeVerifier } from '@/shared/lib/utils/pkce'
@@ -21,6 +21,8 @@ export function useSigninFlow() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle')
   const [provider, setProvider] = useState<OAuthProvider | null>(null)
+  const [restoreUser, setRestoreUser] = useState<RestoreUser | null>(null)
+  const [isRestoring, setIsRestoring] = useState(false)
   const calledRef = useRef(false)
 
   useEffect(() => {
@@ -77,6 +79,21 @@ export function useSigninFlow() {
           return
         }
 
+        if (json.data.restoreToken && json.data.restorableUntil) {
+          setRestoreUser({
+            restoreToken: json.data.restoreToken,
+            restorableUntil: json.data.restorableUntil,
+            user: json.data.user,
+          })
+          setStatus('idle')
+          return
+        }
+
+        if (!json.data.user) {
+          setErrorMessage('로그인 인증에 실패했습니다.')
+          setStatus('idle')
+          return
+        }
         signin(json.data.user)
         setStatus('success')
         timeoutId = setTimeout(() => router.replace('/dashboard'), 700)
@@ -133,10 +150,47 @@ export function useSigninFlow() {
     window.location.href = `${process.env.NEXT_PUBLIC_GOOGLE_AUTH_URL}?${params.toString()}`
   }
 
+  const clearRestoreUser = () => {
+    setRestoreUser(null)
+    setErrorMessage(null)
+  }
+
+  const handleRestore = async () => {
+    if (!restoreUser) return
+    setIsRestoring(true)
+    setErrorMessage(null)
+
+    try {
+      const res = await fetch('/api/auth/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restoreToken: restoreUser.restoreToken }),
+      })
+
+      const json = await res.json()
+
+      if (!json.success || !json.data) {
+        setErrorMessage(json.message ?? '계정 복구에 실패했습니다.')
+        setIsRestoring(false)
+        return
+      }
+
+      signin(json.data.user)
+      router.replace('/dashboard')
+    } catch {
+      setErrorMessage('서버 연결에 실패했습니다.')
+      setIsRestoring(false)
+    }
+  }
+
   return {
     status,
     provider,
     errorMessage,
+    restoreUser,
+    isRestoring,
+    clearRestoreUser,
+    handleRestore,
     handleKakaoLogin,
     handleGoogleLogin,
   }
