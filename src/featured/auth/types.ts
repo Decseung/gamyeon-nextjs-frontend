@@ -16,6 +16,7 @@ export interface AuthState {
   isSessionVerified: boolean
   signin: (user: User) => void
   restoreSession: (user: User) => void
+  updateNickname: (userId: number, nickname: string) => boolean
   logout: () => void
 }
 
