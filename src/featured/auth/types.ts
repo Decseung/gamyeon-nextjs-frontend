@@ -21,7 +21,7 @@ export interface AuthState {
 export interface OAuthLoginData {
   accessToken: string
   refreshToken: string
-  user: User
+  user: User | null
   restoreToken: string | null
   restorableUntil: string | null
 }
@@ -29,5 +29,5 @@ export interface OAuthLoginData {
 export interface RestoreUser {
   restoreToken: string
   restorableUntil: string
-  user: User
+  user: User | null
 }

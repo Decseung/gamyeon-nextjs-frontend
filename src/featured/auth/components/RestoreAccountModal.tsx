@@ -41,7 +41,7 @@ export function RestoreAccountModal({
         <h2 className="text-foreground mb-1 text-center text-base font-semibold">
           탈퇴한 계정을 복구하시겠습니까?
         </h2>
-        <p className="text-muted-foreground mb-4 text-center text-sm">{restoreUser.user.email}</p>
+        <p className="text-muted-foreground mb-4 text-center text-sm">{restoreUser.user?.email}</p>
         {errorMessage && <SigninErrorMessage message={errorMessage} />}
         {errorMessage ? (
           <div className="flex flex-col gap-2">

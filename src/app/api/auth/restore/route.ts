@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
-    const res = await fetch(`${apiUrl}/api/v1/auth/restore`, {
+    const res = await fetch(`${apiUrl}/api/v1/auth/account/restore`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ restoreToken }),

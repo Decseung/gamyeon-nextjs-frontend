@@ -89,6 +89,11 @@ export function useSigninFlow() {
           return
         }
 
+        if (!json.data.user) {
+          setErrorMessage('로그인 인증에 실패했습니다.')
+          setStatus('idle')
+          return
+        }
         signin(json.data.user)
         setStatus('success')
         timeoutId = setTimeout(() => router.replace('/dashboard'), 700)
