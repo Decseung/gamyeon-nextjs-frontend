@@ -19,6 +19,7 @@ export function SigninForm() {
     errorMessage,
     restoreUser,
     isRestoring,
+    isClearingRestore,
     clearRestoreUser,
     handleRestore,
     handleKakaoLogin,
@@ -41,6 +42,7 @@ export function SigninForm() {
           restoreUser={restoreUser}
           errorMessage={errorMessage}
           isRestoring={isRestoring}
+          isClearingRestore={isClearingRestore}
           clearRestoreUser={clearRestoreUser}
           handleRestore={handleRestore}
           handleKakaoLogin={handleKakaoLogin}

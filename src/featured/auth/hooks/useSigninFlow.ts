@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/featured/auth/store'
-import type { OAuthLoginData, RestoreUser } from '@/featured/auth/types'
+import type { OAuthLoginData, RestoreAccountData, RestoreUser } from '@/featured/auth/types'
 import type { ApiResponse } from '@/shared/lib/api/types'
 import type { OAuthProvider } from '@/shared/ui/provider-icon'
 import { generateCodeChallenge, generateCodeVerifier } from '@/shared/lib/utils/pkce'
@@ -23,6 +23,7 @@ export function useSigninFlow() {
   const [provider, setProvider] = useState<OAuthProvider | null>(null)
   const [restoreUser, setRestoreUser] = useState<RestoreUser | null>(null)
   const [isRestoring, setIsRestoring] = useState(false)
+  const [isClearingRestore, setIsClearingRestore] = useState(false)
   const calledRef = useRef(false)
 
   useEffect(() => {
@@ -79,9 +80,8 @@ export function useSigninFlow() {
           return
         }
 
-        if (json.data.restoreToken && json.data.restorableUntil) {
+        if (json.data.restoreRequired) {
           setRestoreUser({
-            restoreToken: json.data.restoreToken,
             restorableUntil: json.data.restorableUntil,
             user: json.data.user,
           })
@@ -150,9 +150,25 @@ export function useSigninFlow() {
     window.location.href = `${process.env.NEXT_PUBLIC_GOOGLE_AUTH_URL}?${params.toString()}`
   }
 
-  const clearRestoreUser = () => {
-    setRestoreUser(null)
+  const clearRestoreUser = async () => {
+    if (!restoreUser || isRestoring || isClearingRestore) return
+
+    setIsClearingRestore(true)
     setErrorMessage(null)
+
+    try {
+      const res = await fetch('/api/auth/restore', { method: 'DELETE' })
+
+      if (!res.ok) {
+        throw new Error('restore cleanup failed')
+      }
+
+      setRestoreUser(null)
+    } catch {
+      setErrorMessage('계정 복구 요청 취소에 실패했습니다. 다시 시도해 주세요.')
+    } finally {
+      setIsClearingRestore(false)
+    }
   }
 
   const handleRestore = async () => {
@@ -163,13 +179,11 @@ export function useSigninFlow() {
     try {
       const res = await fetch('/api/auth/restore', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restoreToken: restoreUser.restoreToken }),
       })
 
-      const json = await res.json()
+      const json: ApiResponse<RestoreAccountData> = await res.json()
 
-      if (!json.success || !json.data) {
+      if (!json.success || !json.data?.user) {
         setErrorMessage(json.message ?? '계정 복구에 실패했습니다.')
         setIsRestoring(false)
         return
@@ -189,6 +203,7 @@ export function useSigninFlow() {
     errorMessage,
     restoreUser,
     isRestoring,
+    isClearingRestore,
     clearRestoreUser,
     handleRestore,
     handleKakaoLogin,
