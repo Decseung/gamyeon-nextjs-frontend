@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader } from '@/shared/ui/card'
 import { Separator } from '@/shared/ui/separator'
@@ -11,8 +13,19 @@ import { SigninSuccessScreen } from './SigninSuccessScreen'
 import { RestoreAccountModal } from './RestoreAccountModal'
 import { SigninErrorMessage } from './SigninErrorMessage'
 import { OAuthLoginButtons } from './OAuthLoginButtons'
+import { WithdrawalCompleteModal } from './WithdrawalCompleteModal'
+import {
+  parseWithdrawalCompletionPayload,
+  WITHDRAWAL_COMPLETION_STORAGE_KEY,
+  type WithdrawalCompletionPayload,
+} from '@/featured/auth/lib/withdrawal-completion'
 
 export function SigninForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const withdrawalStatus = searchParams.get('withdrawal')
+  const [withdrawalCompletion, setWithdrawalCompletion] =
+    useState<WithdrawalCompletionPayload | null>(null)
   const {
     status,
     provider,
@@ -26,6 +39,19 @@ export function SigninForm() {
     handleGoogleLogin,
   } = useSigninFlow()
 
+  useEffect(() => {
+    if (withdrawalStatus !== 'complete') return
+
+    const storedPayload = sessionStorage.getItem(WITHDRAWAL_COMPLETION_STORAGE_KEY)
+    sessionStorage.removeItem(WITHDRAWAL_COMPLETION_STORAGE_KEY)
+    const completionPayload = parseWithdrawalCompletionPayload(storedPayload)
+
+    router.replace('/signin')
+    // sessionStorage는 클라이언트에서만 읽을 수 있어 마운트 후 일회성 안내를 복원한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (completionPayload) setWithdrawalCompletion(completionPayload)
+  }, [router, withdrawalStatus])
+
   if (status === 'loading') {
     if (!provider) return null
     return <SigninLoadingScreen provider={provider} />
@@ -37,6 +63,12 @@ export function SigninForm() {
 
   return (
     <div className="bg-muted/20 flex min-h-screen items-center justify-center px-4">
+      <WithdrawalCompleteModal
+        completion={withdrawalCompletion}
+        onOpenChange={(open) => {
+          if (!open) setWithdrawalCompletion(null)
+        }}
+      />
       {restoreUser && (
         <RestoreAccountModal
           restoreUser={restoreUser}
