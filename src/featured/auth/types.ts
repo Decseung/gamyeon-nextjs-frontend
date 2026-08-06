@@ -19,16 +19,23 @@ export interface AuthState {
   logout: () => void
 }
 
-export interface OAuthLoginData {
-  accessToken: string
-  refreshToken: string
-  user: User | null
-  restoreToken: string | null
-  restorableUntil: string | null
-}
+export type OAuthLoginData =
+  | {
+      user: User
+      restoreRequired: false
+      restorableUntil: null
+    }
+  | {
+      user: User | null
+      restoreRequired: true
+      restorableUntil: string | null
+    }
 
 export interface RestoreUser {
-  restoreToken: string
-  restorableUntil: string
+  restorableUntil: string | null
   user: User | null
+}
+
+export interface RestoreAccountData {
+  user: User
 }

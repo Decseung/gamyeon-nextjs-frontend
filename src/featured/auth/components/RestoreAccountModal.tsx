@@ -11,7 +11,8 @@ interface RestoreAccountModalProps {
   restoreUser: RestoreUser
   errorMessage: string | null
   isRestoring: boolean
-  clearRestoreUser: () => void
+  isClearingRestore: boolean
+  clearRestoreUser: () => Promise<void>
   handleRestore: () => void
   handleKakaoLogin: () => void
   handleGoogleLogin: () => void
@@ -21,11 +22,14 @@ export function RestoreAccountModal({
   restoreUser,
   errorMessage,
   isRestoring,
+  isClearingRestore,
   clearRestoreUser,
   handleRestore,
   handleKakaoLogin,
   handleGoogleLogin,
 }: RestoreAccountModalProps) {
+  const isBusy = isRestoring || isClearingRestore
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -48,6 +52,7 @@ export function RestoreAccountModal({
             <Button
               type="button"
               className="w-full cursor-pointer gap-2.5 bg-[#FEE500] font-medium text-[#3C1E1E] hover:bg-[#F0D900] active:bg-[#E8CF00]"
+              disabled={isBusy}
               onClick={handleKakaoLogin}
             >
               <ProviderIcon provider="kakao" className="h-5 w-5 shrink-0" />
@@ -57,6 +62,7 @@ export function RestoreAccountModal({
               type="button"
               variant="outline"
               className="active:bg-muted/50 w-full cursor-pointer gap-2.5"
+              disabled={isBusy}
               onClick={handleGoogleLogin}
             >
               <ProviderIcon provider="google" className="h-4 w-4 shrink-0" />
@@ -66,10 +72,19 @@ export function RestoreAccountModal({
               type="button"
               variant="outline"
               className="w-full cursor-pointer"
-              disabled={isRestoring}
+              disabled={isBusy}
               onClick={handleRestore}
             >
               {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : '복구 재시도'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full cursor-pointer"
+              disabled={isBusy}
+              onClick={() => void clearRestoreUser()}
+            >
+              {isClearingRestore ? <Loader2 className="h-4 w-4 animate-spin" /> : '취소'}
             </Button>
           </div>
         ) : (
@@ -78,15 +93,15 @@ export function RestoreAccountModal({
               type="button"
               variant="outline"
               className="flex-1 cursor-pointer"
-              disabled={isRestoring}
-              onClick={clearRestoreUser}
+              disabled={isBusy}
+              onClick={() => void clearRestoreUser()}
             >
-              취소
+              {isClearingRestore ? <Loader2 className="h-4 w-4 animate-spin" /> : '취소'}
             </Button>
             <Button
               type="button"
               className="flex-1 cursor-pointer"
-              disabled={isRestoring}
+              disabled={isBusy}
               onClick={handleRestore}
             >
               {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : '복구'}
