@@ -49,25 +49,25 @@ function CompletedCardFront({ record }: CompletedCardProps) {
   )
 }
 function CompletedCardBack({ record }: CompletedCardProps) {
-  const strengths = record.report?.strengths ?? []
-  const weaknesses = record.report?.weaknesses ?? []
+  const strengths = (record.report?.strengths ?? []).slice(0, 3)
+  const weaknesses = (record.report?.weaknesses ?? []).slice(0, 3)
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[45fr_45fr_10fr] gap-2 overflow-hidden bg-white p-3 @[280px]:gap-4 @[280px]:p-6">
+    <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 overflow-hidden bg-white p-3 @[280px]:gap-3 @[280px]:p-4">
       {/* 잘한 점 */}
-      <div className="flex min-h-0 flex-col overflow-hidden rounded-md bg-green-50 p-3 @[280px]:rounded-lg @[280px]:p-5">
-        <div className="mb-1 flex shrink-0 items-center gap-1 @[280px]:mb-1.5 @[280px]:gap-2">
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-md bg-green-50 p-2 @[280px]:rounded-lg @[280px]:p-3">
+        <div className="mb-0.5 flex shrink-0 items-center gap-1 @[280px]:mb-1 @[280px]:gap-2">
           <div className="rounded-full bg-green-500 p-0.5 @[280px]:p-1">
             <TrendingUp className="h-2.5 w-2.5 text-white @[280px]:h-3 @[280px]:w-3" />
           </div>
           <p className="text-xs font-semibold text-green-900 @[280px]:text-sm">잘한 점</p>
         </div>
-        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden @[280px]:gap-1.5">
+        <ul className="grid min-h-0 flex-1 grid-rows-3 gap-0.5 overflow-hidden @[280px]:gap-1">
           {strengths.length > 0 ? (
             strengths.map((strength: string, idx: number) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-green-600" />
-                <span className="line-clamp-1 text-[10px] text-green-800 @[280px]:text-xs">
+              <li key={idx} className="flex min-h-0 items-center gap-1.5">
+                <span className="h-1 w-1 shrink-0 rounded-full bg-green-600" />
+                <span className="line-clamp-1 text-[10px] leading-3.5 text-green-800 @[280px]:text-xs @[280px]:leading-4">
                   {strength}
                 </span>
               </li>
@@ -80,19 +80,19 @@ function CompletedCardBack({ record }: CompletedCardProps) {
         </ul>
       </div>
 
-      <div className="flex min-h-0 flex-col overflow-hidden rounded-md bg-orange-50 p-3 @[280px]:rounded-lg @[280px]:p-5">
-        <div className="mb-1 flex shrink-0 items-center gap-1 @[280px]:mb-1.5 @[280px]:gap-2">
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-md bg-orange-50 p-2 @[280px]:rounded-lg @[280px]:p-3">
+        <div className="mb-0.5 flex shrink-0 items-center gap-1 @[280px]:mb-1 @[280px]:gap-2">
           <div className="rounded-full bg-orange-500 p-0.5 @[280px]:p-1">
             <AlertCircle className="h-2.5 w-2.5 text-white @[280px]:h-3 @[280px]:w-3" />
           </div>
           <p className="text-xs font-semibold text-orange-900 @[280px]:text-sm">개선점</p>
         </div>
-        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden @[280px]:gap-1.5">
+        <ul className="grid min-h-0 flex-1 grid-rows-3 gap-0.5 overflow-hidden @[280px]:gap-1">
           {weaknesses.length > 0 ? (
             weaknesses.map((weakness: string, idx: number) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-orange-600" />
-                <span className="line-clamp-1 text-[10px] text-orange-800 @[280px]:text-xs">
+              <li key={idx} className="flex min-h-0 items-center gap-1.5">
+                <span className="h-1 w-1 shrink-0 rounded-full bg-orange-600" />
+                <span className="line-clamp-1 text-[10px] leading-3.5 text-orange-800 @[280px]:text-xs @[280px]:leading-4">
                   {weakness}
                 </span>
               </li>
