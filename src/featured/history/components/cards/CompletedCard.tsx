@@ -3,7 +3,6 @@
 import { AlertCircle, Calendar, Clock, TrendingUp } from 'lucide-react'
 import { InterviewReportItem } from '@/featured/history/types'
 import { formatDateDot, formatDuration } from '@/shared/lib/utils/date'
-import styles from './CardFluid.module.css'
 
 interface CompletedCardProps {
   record: InterviewReportItem
@@ -13,37 +12,35 @@ function CompletedCardFront({ record }: CompletedCardProps) {
   return (
     <div className="grid h-full min-h-0 grid-rows-2 overflow-hidden">
       {/* 헤더 그라디언트 영역 */}
-      <div
-        className={`relative flex min-h-0 items-center overflow-hidden bg-linear-to-tr/srgb from-indigo-500 to-teal-400 text-white ${styles.frontInset}`}
-      >
+      <div className="relative flex min-h-0 items-center overflow-hidden bg-linear-to-tr/srgb from-indigo-500 to-teal-400 p-3 text-white @[280px]:p-6">
         <div className="w-full">
-          <div className={`flex items-end ${styles.scoreRow}`}>
-            <span className={`font-bold ${styles.score}`}>{record.report?.totalScore}</span>
-            <span className={`opacity-90 ${styles.scoreUnit}`}>점</span>
+          <div className="flex items-end gap-1 @[280px]:gap-2">
+            <span className="text-4xl font-bold @[280px]:text-6xl">
+              {record.report?.totalScore}
+            </span>
+            <span className="mb-1 text-lg opacity-90 @[280px]:mb-2 @[280px]:text-2xl">점</span>
           </div>
         </div>
       </div>
 
       {/* 바디 */}
       <div className="grid min-h-0 grid-rows-2 overflow-hidden">
-        <div
-          className={`flex min-h-0 flex-col justify-center overflow-hidden py-0.5 ${styles.frontHorizontalInset}`}
-        >
-          <h3 className={`line-clamp-2 leading-tight font-bold text-gray-900 ${styles.title}`}>
+        <div className="flex min-h-0 flex-col justify-center overflow-hidden px-3 py-0.5 @[280px]:px-6">
+          <h3 className="mb-0.5 line-clamp-2 text-sm leading-tight font-bold text-gray-900 @[280px]:mb-1 @[280px]:text-xl">
             {record.title}
           </h3>
-          <p className={`text-gray-500 ${styles.caption}`}>{record.report?.answeredCount}개 질문</p>
+          <p className="text-[10px] text-gray-500 @[280px]:text-sm">
+            {record.report?.answeredCount}개 질문
+          </p>
         </div>
 
-        <div
-          className={`flex min-h-0 flex-col justify-center overflow-hidden py-0.5 ${styles.frontHorizontalInset} ${styles.metaStack}`}
-        >
-          <div className={`flex items-center text-gray-600 ${styles.meta}`}>
-            <Calendar className={`shrink-0 text-blue-500 ${styles.metaIcon}`} />
+        <div className="flex min-h-0 flex-col justify-center gap-1 overflow-hidden px-3 py-0.5 @[280px]:gap-3 @[280px]:px-6">
+          <div className="flex items-center gap-1 text-xs text-gray-600 @[280px]:gap-2 @[280px]:text-base">
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-blue-500 @[280px]:h-5 @[280px]:w-5" />
             <span>{formatDateDot(new Date(record.updatedAt))}</span>
           </div>
-          <div className={`flex items-center text-gray-600 ${styles.meta}`}>
-            <Clock className={`shrink-0 text-blue-500 ${styles.metaIcon}`} />
+          <div className="flex items-center gap-1 text-xs text-gray-600 @[280px]:gap-2 @[280px]:text-base">
+            <Clock className="h-3.5 w-3.5 shrink-0 text-blue-500 @[280px]:h-5 @[280px]:w-5" />
             <span>{formatDuration(record.durationSeconds)}</span>
           </div>
         </div>
@@ -56,61 +53,59 @@ function CompletedCardBack({ record }: CompletedCardProps) {
   const weaknesses = record.report?.weaknesses ?? []
 
   return (
-    <div
-      className={`grid h-full min-h-0 grid-rows-[45fr_45fr_10fr] overflow-hidden bg-white ${styles.back}`}
-    >
+    <div className="grid h-full min-h-0 grid-rows-[45fr_45fr_10fr] gap-2 overflow-hidden bg-white p-3 @[280px]:gap-4 @[280px]:p-6">
       {/* 잘한 점 */}
-      <div className={`flex min-h-0 flex-col overflow-hidden bg-green-50 ${styles.panel}`}>
-        <div className={`flex shrink-0 items-center ${styles.panelHeading}`}>
-          <div className={`rounded-full bg-green-500 ${styles.panelIconShell}`}>
-            <TrendingUp className={`text-white ${styles.panelIcon}`} />
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-md bg-green-50 p-3 @[280px]:rounded-lg @[280px]:p-5">
+        <div className="mb-1 flex shrink-0 items-center gap-1 @[280px]:mb-1.5 @[280px]:gap-2">
+          <div className="rounded-full bg-green-500 p-0.5 @[280px]:p-1">
+            <TrendingUp className="h-2.5 w-2.5 text-white @[280px]:h-3 @[280px]:w-3" />
           </div>
-          <p className={`font-semibold text-green-900 ${styles.panelTitle}`}>잘한 점</p>
+          <p className="text-xs font-semibold text-green-900 @[280px]:text-sm">잘한 점</p>
         </div>
-        <ul className={`flex min-h-0 flex-1 flex-col overflow-hidden ${styles.panelList}`}>
+        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden @[280px]:gap-1.5">
           {strengths.length > 0 ? (
             strengths.map((strength: string, idx: number) => (
-              <li key={idx} className={`flex items-start ${styles.panelItem}`}>
-                <span className={`shrink-0 rounded-full bg-green-600 ${styles.panelBullet}`} />
-                <span className={`line-clamp-1 text-green-800 ${styles.panelBody}`}>
+              <li key={idx} className="flex items-start gap-1.5">
+                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-green-600" />
+                <span className="line-clamp-1 text-[10px] text-green-800 @[280px]:text-xs">
                   {strength}
                 </span>
               </li>
             ))
           ) : (
-            <li className={`text-green-700/70 ${styles.panelBody}`}>분석된 잘한 점이 없습니다</li>
+            <li className="text-[10px] text-green-700/70 @[280px]:text-xs">
+              분석된 잘한 점이 없습니다
+            </li>
           )}
         </ul>
       </div>
 
-      <div className={`flex min-h-0 flex-col overflow-hidden bg-orange-50 ${styles.panel}`}>
-        <div className={`flex shrink-0 items-center ${styles.panelHeading}`}>
-          <div className={`rounded-full bg-orange-500 ${styles.panelIconShell}`}>
-            <AlertCircle className={`text-white ${styles.panelIcon}`} />
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-md bg-orange-50 p-3 @[280px]:rounded-lg @[280px]:p-5">
+        <div className="mb-1 flex shrink-0 items-center gap-1 @[280px]:mb-1.5 @[280px]:gap-2">
+          <div className="rounded-full bg-orange-500 p-0.5 @[280px]:p-1">
+            <AlertCircle className="h-2.5 w-2.5 text-white @[280px]:h-3 @[280px]:w-3" />
           </div>
-          <p className={`font-semibold text-orange-900 ${styles.panelTitle}`}>개선점</p>
+          <p className="text-xs font-semibold text-orange-900 @[280px]:text-sm">개선점</p>
         </div>
-        <ul className={`flex min-h-0 flex-1 flex-col overflow-hidden ${styles.panelList}`}>
+        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden @[280px]:gap-1.5">
           {weaknesses.length > 0 ? (
             weaknesses.map((weakness: string, idx: number) => (
-              <li key={idx} className={`flex items-start ${styles.panelItem}`}>
-                <span className={`shrink-0 rounded-full bg-orange-600 ${styles.panelBullet}`} />
-                <span className={`line-clamp-1 text-orange-800 ${styles.panelBody}`}>
+              <li key={idx} className="flex items-start gap-1.5">
+                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-orange-600" />
+                <span className="line-clamp-1 text-[10px] text-orange-800 @[280px]:text-xs">
                   {weakness}
                 </span>
               </li>
             ))
           ) : (
-            <li className={`text-orange-700/70 ${styles.panelBody}`}>
+            <li className="text-[10px] text-orange-700/70 @[280px]:text-xs">
               개선할 점이 발견되지 않았습니다
             </li>
           )}
         </ul>
       </div>
 
-      <div
-        className={`flex min-h-0 items-center justify-center overflow-hidden px-2 text-center text-gray-500 ${styles.backCta}`}
-      >
+      <div className="flex min-h-0 items-center justify-center overflow-hidden px-2 text-center text-[10px] text-gray-500 @[280px]:text-xs">
         클릭하여 자세히 보기
       </div>
     </div>
