@@ -197,7 +197,7 @@ export function FlipCard({ record }: FlipCardProps) {
       className={`h-full w-full ${isCompleted ? 'cursor-pointer' : 'cursor-default'}`}
     >
       <CardContainer isHovered={isHovered}>
-        <Card className="absolute inset-0 flex flex-col overflow-hidden backface-hidden">
+        <Card className="absolute inset-0 flex flex-col gap-0 overflow-hidden backface-hidden">
           {cardType === 'completedCard' && <CompletedCardFront record={record} />}
           {cardType === 'pendingCard' && (
             <PendingCard intvId={record.intvId} title={record.title} />
@@ -208,7 +208,7 @@ export function FlipCard({ record }: FlipCardProps) {
 
         {isCompleted && (
           <Card
-            className="absolute inset-0 overflow-hidden antialiased backface-hidden"
+            className="absolute inset-0 gap-0 overflow-hidden antialiased backface-hidden"
             style={{ transform: 'rotateY(180deg) translateZ(1px)' }}
           >
             <CompletedCardBack record={record} />
