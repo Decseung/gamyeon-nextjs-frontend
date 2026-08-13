@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildTokenExpiresMap } from '@/shared/lib/auth/jwt'
 import {
   clearRestoreTokenCookie,
+  RESTORE_TOKEN_COOKIE_NAME,
   setAuthTokenCookies,
-  setRestoreTokenCookie,
 } from '@/shared/lib/auth/cookies'
 import type { User } from '@/featured/auth/types'
 
-const SUPPORTED_PROVIDERS = ['google', 'kakao'] as const
-type Provider = (typeof SUPPORTED_PROVIDERS)[number]
 type UnknownRecord = Record<string, unknown>
 
 function asRecord(value: unknown): UnknownRecord | null {
@@ -65,42 +63,19 @@ function getInvalidUpstreamStatus(response: Response): number {
   return response.ok || response.status === 304 ? 502 : response.status
 }
 
-/**
- * POST /api/auth/[provider]
- * OAuth 인증 코드를 백엔드로 전달하고 민감한 토큰은 HttpOnly 쿠키로만 저장한다.
- */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ provider: string }> },
-) {
+export async function POST(request: NextRequest) {
   try {
-    const { provider } = await params
+    const restoreToken = request.cookies.get(RESTORE_TOKEN_COOKIE_NAME)?.value
 
-    if (!SUPPORTED_PROVIDERS.includes(provider as Provider)) {
-      return errorResponse(400, 'CMMN-V002', '지원하지 않는 provider입니다.')
-    }
-
-    const body = asRecord(await request.json())
-    const authorizationCode = asNonEmptyString(body?.authorizationCode)
-    const codeVerifier = asNonEmptyString(body?.codeVerifier)
-
-    if (!authorizationCode) {
-      return errorResponse(400, 'CMMN-V001', 'authorizationCode가 없습니다.')
-    }
-
-    if (!codeVerifier) {
-      return errorResponse(400, 'CMMN-V001', 'codeVerifier가 없습니다.')
+    if (!restoreToken) {
+      return errorResponse(401, 'RESTORE_SESSION_MISSING', '계정 복구 요청이 만료되었습니다.')
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
-    const redirectUri =
-      provider === 'google'
-        ? process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI
-        : process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI
-    const res = await fetch(`${apiUrl}/api/v1/auth/login/${provider}`, {
+    const res = await fetch(`${apiUrl}/api/v1/auth/account/restore`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorizationCode, codeVerifier, redirectUri }),
+      body: JSON.stringify({ restoreToken }),
       cache: 'no-store',
     })
 
@@ -109,52 +84,34 @@ export async function POST(
     if (!payload) {
       return errorResponse(
         getInvalidUpstreamStatus(res),
-        res.ok ? 'AUTH_RESPONSE_INVALID' : 'AUTH_FAILED',
-        '로그인 인증 응답을 확인할 수 없습니다.',
+        res.ok ? 'AUTH_RESPONSE_INVALID' : 'RESTORE_FAILED',
+        '계정 복구 응답을 확인할 수 없습니다.',
       )
     }
 
     if (!res.ok || payload.success !== true) {
       return errorResponse(
         res.status,
-        getPublicCode(payload, 'AUTH_FAILED'),
-        '로그인 인증에 실패했습니다.',
+        getPublicCode(payload, 'RESTORE_FAILED'),
+        '계정 복구에 실패했습니다.',
       )
     }
 
     const authData = asRecord(payload.data)
-    const user = getPublicUser(authData?.user)
-    const restoreToken = asNonEmptyString(authData?.restoreToken)
-    const restorableUntil = asNonEmptyString(authData?.restorableUntil)
-    const code = getPublicCode(payload, 'SUCCESS')
-
-    if (restoreToken) {
-      const response = jsonNoStore(
-        {
-          success: true,
-          code,
-          message: '복구 가능한 계정이 있습니다.',
-          data: { user, restoreRequired: true, restorableUntil },
-        },
-        res.status,
-      )
-      setRestoreTokenCookie(response.cookies, restoreToken, restorableUntil)
-      return response
-    }
-
     const accessToken = asNonEmptyString(authData?.accessToken)
     const refreshToken = asNonEmptyString(authData?.refreshToken)
+    const user = getPublicUser(authData?.user)
 
     if (!accessToken || !refreshToken || !user) {
-      return errorResponse(502, 'AUTH_RESPONSE_INVALID', '로그인 인증 응답을 확인할 수 없습니다.')
+      return errorResponse(502, 'AUTH_RESPONSE_INVALID', '계정 복구 응답을 확인할 수 없습니다.')
     }
 
     const response = jsonNoStore(
       {
         success: true,
-        code,
-        message: '로그인에 성공했습니다.',
-        data: { user, restoreRequired: false, restorableUntil: null },
+        code: getPublicCode(payload, 'SUCCESS'),
+        message: '계정 복구에 성공했습니다.',
+        data: { user },
       },
       res.status,
     )
@@ -166,4 +123,14 @@ export async function POST(
   } catch {
     return errorResponse(500, 'NETWORK_ERROR', '서버 연결에 실패했습니다.')
   }
+}
+
+/** 계정 복구 취소 시 브라우저에 남은 임시 복구 자격 증명을 폐기한다. */
+export async function DELETE() {
+  const response = jsonNoStore(
+    { success: true, code: 'SUCCESS', message: '계정 복구 요청을 취소했습니다.', data: null },
+    200,
+  )
+  clearRestoreTokenCookie(response.cookies)
+  return response
 }

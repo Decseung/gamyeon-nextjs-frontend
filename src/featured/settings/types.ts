@@ -12,3 +12,12 @@ export interface ThemeOption {
   value: ThemeValue
   label: string
 }
+
+export interface UpdateNicknameRequest {
+  nickname: string
+}
+
+export interface NicknameUpdateData {
+  id: number
+  nickname: string
+}

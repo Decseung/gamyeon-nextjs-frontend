@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { useAuthStore } from '@/featured/auth/store'
-import { logout } from '@/featured/auth/actions/auth.action'
+import { logoutAction } from '@/featured/auth/actions/auth.action'
 import { LayoutDashboard, LogOut, Settings } from 'lucide-react'
 
 export function UserProfileButton() {
@@ -21,7 +21,7 @@ export function UserProfileButton() {
 
   const handleLogout = async () => {
     try {
-      await logout()
+      await logoutAction()
     } finally {
       clearAuthStore()
       router.push('/signin')
