@@ -1,28 +1,11 @@
-import type { ElementType } from 'react'
-import { CheckCircle2, CircleAlert, Loader2, Megaphone } from 'lucide-react'
-import type { Notif, NotifType } from '../types'
+import { NOTIF_STYLE_CONFIG } from '../constants'
+import type { Notif } from '../types'
 import { cn } from '@/shared/lib/utils'
-
-const NOTIF_STYLE_CONFIG = {
-  NOTICE: { icon: Megaphone, color: 'text-blue-500' },
-  REPORT_PROCESSING: { icon: Loader2, color: 'text-primary' },
-  REPORT_SUCCESS: { icon: CheckCircle2, color: 'text-green-500' },
-  REPORT_FAILED: { icon: CircleAlert, color: 'text-red-500' },
-} satisfies Record<NotifType, { icon: ElementType; color: string }>
+import { formatMonthDayTimeKorean } from '@/shared/lib/utils/date'
 
 interface NotifItemProps {
   notif: Notif
   onClick: (notif: Notif) => void
-}
-
-function formatCreatedAt(createdAt: string) {
-  return new Date(createdAt).toLocaleString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
 }
 
 export function NotifItem({ notif, onClick }: NotifItemProps) {
@@ -55,7 +38,7 @@ export function NotifItem({ notif, onClick }: NotifItemProps) {
             dateTime={notif.createdAt}
             className="text-muted-foreground/70 mt-1 block text-[11px]"
           >
-            {formatCreatedAt(notif.createdAt)}
+            {formatMonthDayTimeKorean(notif.createdAt)}
           </time>
         </div>
       </button>
