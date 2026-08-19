@@ -49,7 +49,7 @@ export function CardContainer({ children, isHovered = false }: CardContainerProp
   }, [isHovered, cardControls, shadowControls])
 
   return (
-    <div className="@container relative aspect-5/5.5 w-full" style={{ perspective: '900px' }}>
+    <div className="@container relative aspect-[10/11] w-full" style={{ perspective: '900px' }}>
       {/* Dynamic drop shadow */}
       <motion.div
         className="pointer-events-none absolute inset-x-8 -bottom-1 -z-10 rounded-full bg-black blur-2xl"
@@ -59,7 +59,7 @@ export function CardContainer({ children, isHovered = false }: CardContainerProp
       />
 
       <motion.div
-        className="relative h-full w-full"
+        className="relative h-full min-h-0 w-full"
         animate={cardControls}
         initial={{ rotateY: 0, y: 0, scale: 1 }}
         style={{ transformStyle: 'preserve-3d' }}

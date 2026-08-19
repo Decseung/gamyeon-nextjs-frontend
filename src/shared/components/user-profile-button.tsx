@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import {
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { useAuthStore } from '@/featured/auth/store'
-import { logout } from '@/featured/auth/actions/auth.action'
+import { logoutAction } from '@/featured/auth/actions/auth.action'
 import { LayoutDashboard, LogOut, Settings } from 'lucide-react'
 
 export function UserProfileButton() {
@@ -20,7 +21,7 @@ export function UserProfileButton() {
 
   const handleLogout = async () => {
     try {
-      await logout()
+      await logoutAction()
     } finally {
       clearAuthStore()
       router.push('/signin')
@@ -30,7 +31,10 @@ export function UserProfileButton() {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className="ring-primary/40 flex cursor-pointer items-center rounded-full transition outline-none hover:ring-2">
+        <button
+          aria-label="프로필 메뉴"
+          className="ring-primary/40 flex cursor-pointer items-center rounded-full transition outline-none hover:ring-2"
+        >
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
               {initials}
@@ -47,9 +51,11 @@ export function UserProfileButton() {
           <LayoutDashboard className="h-4 w-4" />
           대시보드
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer gap-2">
-          <Settings className="h-4 w-4" />
-          설정
+        <DropdownMenuItem asChild>
+          <Link href="/settings" className="cursor-pointer gap-2">
+            <Settings className="h-4 w-4" />
+            설정
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

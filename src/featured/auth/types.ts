@@ -1,22 +1,41 @@
 export interface User {
-  id?: number
+  id: number
   email: string
   nickname: string
+  provider: string
+  status: string
+  createdAt: string
   name?: string
   avatar?: string
-  provider?: string
-  status?: string
 }
 
 export interface AuthState {
   user: User | null
   isLoggedIn: boolean
+  isSessionVerified: boolean
   signin: (user: User) => void
+  restoreSession: (user: User) => void
+  updateNickname: (userId: number, nickname: string) => boolean
   logout: () => void
 }
 
-export interface OAuthLoginData {
-  accessToken: string
-  refreshToken: string
+export type OAuthLoginData =
+  | {
+      user: User
+      restoreRequired: false
+      restorableUntil: null
+    }
+  | {
+      user: User | null
+      restoreRequired: true
+      restorableUntil: string | null
+    }
+
+export interface RestoreUser {
+  restorableUntil: string | null
+  user: User | null
+}
+
+export interface RestoreAccountData {
   user: User
 }

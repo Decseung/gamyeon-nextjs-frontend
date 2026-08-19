@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { useAuthStore } from '@/featured/auth/store'
-import { logout } from '@/featured/auth/actions/auth.action'
+import { logoutAction } from '@/featured/auth/actions/auth.action'
 import Image from 'next/image'
 import { Menu, Play, LayoutDashboard, LogOut, Settings } from 'lucide-react'
 
@@ -48,7 +48,7 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await logout()
+      await logoutAction()
     } finally {
       clearAuthStore()
       setIsOpen(false)
@@ -123,9 +123,11 @@ export function Header() {
                       대시보드
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-2">
-                    <Settings className="h-4 w-4" />
-                    설정
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="cursor-pointer gap-2">
+                      <Settings className="h-4 w-4" />
+                      설정
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

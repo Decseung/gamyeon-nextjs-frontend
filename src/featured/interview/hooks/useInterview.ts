@@ -47,6 +47,7 @@ export function useInterview() {
       .map((q) => ({
         questionSetId: q.questionSetId,
         content: q.content,
+        questionOrder: q.questionOrder,
       }))
   }, [restartContext])
 
