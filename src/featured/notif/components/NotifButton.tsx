@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Bell } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { useNotifActions } from '../hooks/useNotifActions'
 import { useNotifStore } from '../store'
 import type { Notif } from '../types'
 import { NotifList } from './NotifList'
@@ -14,9 +15,7 @@ export function NotifButton() {
   const hasMore = useNotifStore((state) => state.hasMore)
   const isLoading = useNotifStore((state) => state.isLoading)
   const isLoadingMore = useNotifStore((state) => state.isLoadingMore)
-  const fetchMoreNotifs = useNotifStore((state) => state.fetchMoreNotifs)
-  const markAsRead = useNotifStore((state) => state.markAsRead)
-  const markAllAsRead = useNotifStore((state) => state.markAllAsRead)
+  const { fetchMoreNotifs, markAsRead, markAllAsRead } = useNotifActions()
 
   const handleMarkAllAsRead = () => {
     void markAllAsRead().catch((error: unknown) => {

@@ -2,21 +2,21 @@
 
 import { useEffect } from 'react'
 import { useAuthStore } from '@/featured/auth/store'
+import { useNotifActions } from '../hooks/useNotifActions'
 import { subscribeNotifs } from '../services/notif.sse.service'
 import { useNotifStore } from '../store'
 
 export function NotifSubscriber() {
   const logout = useAuthStore((state) => state.logout)
-  const fetchInitialNotifs = useNotifStore((state) => state.fetchInitialNotifs)
-  const prependNotif = useNotifStore((state) => state.prependNotif)
-  const resetNotifs = useNotifStore((state) => state.resetNotifs)
+  const { fetchInitialNotifs } = useNotifActions()
 
   useEffect(() => {
+    const controller = new AbortController()
     let isActive = true
     let hasConnectedOnce = false
 
-    const syncNotifs = () => {
-      void fetchInitialNotifs().catch((error: unknown) => {
+    const requestSync = () => {
+      void fetchInitialNotifs(controller.signal).catch((error: unknown) => {
         if (isActive) {
           console.error('알림 목록을 불러오지 못했습니다.', error)
         }
@@ -24,7 +24,7 @@ export function NotifSubscriber() {
     }
 
     // SSE 연결 여부와 무관하게 기존 알림 목록은 즉시 조회한다.
-    syncNotifs()
+    requestSync()
 
     const cleanupSubscription = subscribeNotifs({
       onConnected: () => {
@@ -34,18 +34,19 @@ export function NotifSubscriber() {
           return
         }
 
-        syncNotifs()
+        requestSync()
       },
       onNotif: (notif) => {
         if (isActive) {
-          prependNotif(notif)
+          useNotifStore.getState().prependNotif(notif)
         }
       },
       onUnauthorized: () => {
         if (!isActive) return
 
         isActive = false
-        resetNotifs()
+        controller.abort()
+        useNotifStore.getState().resetNotifs()
         logout()
         window.location.replace('/api/auth/logout?redirectTo=/signin')
       },
@@ -53,9 +54,10 @@ export function NotifSubscriber() {
 
     return () => {
       isActive = false
+      controller.abort()
       cleanupSubscription()
     }
-  }, [fetchInitialNotifs, logout, prependNotif, resetNotifs])
+  }, [fetchInitialNotifs, logout])
 
   return null
 }

@@ -39,10 +39,14 @@ export interface NotifState {
   hasMore: boolean
   isLoading: boolean
   isLoadingMore: boolean
-  fetchInitialNotifs: () => Promise<void>
-  fetchMoreNotifs: () => Promise<void>
+  beginInitialLoad: () => boolean
+  finishInitialLoad: () => void
+  applyInitialNotifs: (data: NotifListData) => void
+  beginMoreLoad: () => number | null
+  finishMoreLoad: () => void
+  appendNotifs: (data: NotifListData) => void
   prependNotif: (notif: Notif) => void
-  markAsRead: (notifId: number) => Promise<void>
-  markAllAsRead: () => Promise<void>
+  markNotifAsRead: (notifId: number) => void
+  markAllNotifsAsRead: () => void
   resetNotifs: () => void
 }

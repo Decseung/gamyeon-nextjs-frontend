@@ -1,10 +1,5 @@
 import { create } from 'zustand'
-import {
-  getNotifsAction,
-  markAllNotifsAsReadAction,
-  markNotifAsReadAction,
-} from './actions/notif.action'
-import type { Notif, NotifState } from './types'
+import type { Notif, NotifListData, NotifState } from './types'
 
 const initialNotifState = {
   notifs: [] as Notif[],
@@ -35,58 +30,46 @@ function mergeNotifsByCreatedAt(apiNotifs: Notif[], currentNotifs: Notif[]): Not
 export const useNotifStore = create<NotifState>((set, get) => ({
   ...initialNotifState,
 
-  fetchInitialNotifs: async () => {
-    if (get().isLoading) return
+  beginInitialLoad: () => {
+    if (get().isLoading) return false
 
     set({ isLoading: true })
-
-    try {
-      const response = await getNotifsAction()
-      const data = response.data
-      const notifs = data?.notifs ?? []
-
-      set((state) => ({
-        notifs: mergeNotifsByCreatedAt(notifs, state.notifs),
-        unreadCount: data?.unreadCount ?? 0,
-        nextCursorId: notifs.at(-1)?.notifId ?? null,
-        hasMore: data?.hasNext ?? false,
-        isLoading: false,
-        isLoadingMore: false,
-      }))
-    } catch (error) {
-      set({ isLoading: false })
-      throw error
-    }
+    return true
   },
 
-  fetchMoreNotifs: async () => {
+  finishInitialLoad: () => set({ isLoading: false }),
+
+  applyInitialNotifs: (data: NotifListData) => {
+    set((state) => ({
+      notifs: mergeNotifsByCreatedAt(data.notifs, state.notifs),
+      unreadCount: data.unreadCount,
+      nextCursorId: data.notifs.at(-1)?.notifId ?? null,
+      hasMore: data.hasNext ?? false,
+    }))
+  },
+
+  beginMoreLoad: () => {
     const { hasMore, isLoading, isLoadingMore, nextCursorId } = get()
 
-    if (!hasMore || isLoading || isLoadingMore || nextCursorId === null) return
+    if (!hasMore || isLoading || isLoadingMore || nextCursorId === null) return null
 
     set({ isLoadingMore: true })
+    return nextCursorId
+  },
 
-    try {
-      const response = await getNotifsAction({ cursorId: nextCursorId })
-      const data = response.data
-      const incomingNotifs = data?.notifs ?? []
+  finishMoreLoad: () => set({ isLoadingMore: false }),
 
-      set((state) => {
-        const existingIds = new Set(state.notifs.map((notif) => notif.notifId))
-        const uniqueNotifs = incomingNotifs.filter((notif) => !existingIds.has(notif.notifId))
-        const mergedNotifs = [...state.notifs, ...uniqueNotifs]
+  appendNotifs: (data: NotifListData) => {
+    set((state) => {
+      const existingIds = new Set(state.notifs.map((notif) => notif.notifId))
+      const uniqueNotifs = data.notifs.filter((notif) => !existingIds.has(notif.notifId))
 
-        return {
-          notifs: mergedNotifs,
-          nextCursorId: incomingNotifs.at(-1)?.notifId ?? state.nextCursorId,
-          hasMore: data?.hasNext ?? false,
-          isLoadingMore: false,
-        }
-      })
-    } catch (error) {
-      set({ isLoadingMore: false })
-      throw error
-    }
+      return {
+        notifs: [...state.notifs, ...uniqueNotifs],
+        nextCursorId: data.notifs.at(-1)?.notifId ?? state.nextCursorId,
+        hasMore: data.hasNext ?? false,
+      }
+    })
   },
 
   prependNotif: (notif) => {
@@ -103,13 +86,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
     })
   },
 
-  markAsRead: async (notifId) => {
-    const targetNotif = get().notifs.find((notif) => notif.notifId === notifId)
-
-    if (!targetNotif || targetNotif.isRead) return
-
-    await markNotifAsReadAction(notifId)
-
+  markNotifAsRead: (notifId) => {
     set((state) => {
       const currentNotif = state.notifs.find((notif) => notif.notifId === notifId)
 
@@ -124,9 +101,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
     })
   },
 
-  markAllAsRead: async () => {
-    await markAllNotifsAsReadAction()
-
+  markAllNotifsAsRead: () => {
     set((state) => ({
       notifs: state.notifs.map((notif) => ({ ...notif, isRead: true })),
       unreadCount: 0,
