@@ -10,6 +10,8 @@ import {
 import { useNotifStore } from '../store'
 import type { NotifListData } from '../types'
 
+const MUTATION_SETTLE_DELAY_MS = 250
+
 class NotifActionError extends Error {
   readonly code: string
 
@@ -54,16 +56,58 @@ function assertNotifActionSuccess(
   }
 }
 
+function waitForDelay(delayMs: number, signal?: AbortSignal): Promise<boolean> {
+  if (signal?.aborted) return Promise.resolve(false)
+
+  return new Promise((resolve) => {
+    const handleAbort = () => {
+      clearTimeout(timeoutId)
+      resolve(false)
+    }
+    const timeoutId = setTimeout(() => {
+      signal?.removeEventListener('abort', handleAbort)
+      resolve(true)
+    }, delayMs)
+
+    signal?.addEventListener('abort', handleAbort, { once: true })
+  })
+}
+
+async function waitForNotifMutationsToSettle(signal?: AbortSignal): Promise<boolean> {
+  let lastRevision = useNotifStore.getState().mutationRevision
+
+  while (!signal?.aborted) {
+    const completed = await waitForDelay(MUTATION_SETTLE_DELAY_MS, signal)
+    if (!completed) return false
+
+    const currentRevision = useNotifStore.getState().mutationRevision
+    if (currentRevision === lastRevision) return true
+
+    lastRevision = currentRevision
+  }
+
+  return false
+}
+
 export function useNotifActions() {
   const fetchInitialNotifs = useCallback(async (signal?: AbortSignal) => {
     if (signal?.aborted || !useNotifStore.getState().beginInitialLoad()) return
 
     try {
-      const response = await getNotifsAction()
-      const data = getNotifListData(response, '알림 목록을 불러오지 못했습니다.')
+      while (!signal?.aborted) {
+        const revisionAtRequestStart = useNotifStore.getState().mutationRevision
+        const response = await getNotifsAction()
+        const data = getNotifListData(response, '알림 목록을 불러오지 못했습니다.')
 
-      if (!signal?.aborted) {
-        useNotifStore.getState().applyInitialNotifs(data)
+        if (signal?.aborted) return
+
+        if (useNotifStore.getState().mutationRevision === revisionAtRequestStart) {
+          useNotifStore.getState().applyInitialNotifs(data)
+          return
+        }
+
+        const hasSettled = await waitForNotifMutationsToSettle(signal)
+        if (!hasSettled) return
       }
     } finally {
       useNotifStore.getState().finishInitialLoad()

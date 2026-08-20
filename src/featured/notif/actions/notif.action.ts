@@ -12,6 +12,15 @@ export async function getNotifsAction(
 }
 
 export async function markNotifAsReadAction(notifId: number): Promise<ApiResponse<null>> {
+  if (!Number.isSafeInteger(notifId) || notifId <= 0) {
+    return {
+      success: false,
+      code: 'INVALID_ARGUMENT',
+      message: '유효하지 않은 알림 ID입니다.',
+      data: null,
+    }
+  }
+
   return withAction(() => markNotifAsRead(notifId))
 }
 

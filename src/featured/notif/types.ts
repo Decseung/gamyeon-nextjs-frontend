@@ -39,6 +39,7 @@ export interface NotifState {
   hasMore: boolean
   isLoading: boolean
   isLoadingMore: boolean
+  mutationRevision: number
   beginInitialLoad: () => boolean
   finishInitialLoad: () => void
   applyInitialNotifs: (data: NotifListData) => void

@@ -8,12 +8,13 @@ const initialNotifState = {
   hasMore: true,
   isLoading: false,
   isLoadingMore: false,
+  mutationRevision: 0,
 }
 
 function mergeNotifsByCreatedAt(apiNotifs: Notif[], currentNotifs: Notif[]): Notif[] {
-  const notifById = new Map(apiNotifs.map((notif) => [notif.notifId, notif]))
+  const notifById = new Map(currentNotifs.map((notif) => [notif.notifId, notif]))
 
-  for (const notif of currentNotifs) {
+  for (const notif of apiNotifs) {
     notifById.set(notif.notifId, notif)
   }
 
@@ -82,6 +83,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
         notifs: [notif, ...state.notifs],
         unreadCount: notif.isRead ? state.unreadCount : state.unreadCount + 1,
         nextCursorId: state.nextCursorId ?? notif.notifId,
+        mutationRevision: state.mutationRevision + 1,
       }
     })
   },
@@ -97,15 +99,25 @@ export const useNotifStore = create<NotifState>((set, get) => ({
           notif.notifId === notifId ? { ...notif, isRead: true } : notif,
         ),
         unreadCount: Math.max(0, state.unreadCount - 1),
+        mutationRevision: state.mutationRevision + 1,
       }
     })
   },
 
   markAllNotifsAsRead: () => {
-    set((state) => ({
-      notifs: state.notifs.map((notif) => ({ ...notif, isRead: true })),
-      unreadCount: 0,
-    }))
+    set((state) => {
+      if (state.unreadCount === 0 && state.notifs.every((notif) => notif.isRead)) {
+        return {}
+      }
+
+      return {
+        notifs: state.notifs.map((notif) =>
+          notif.isRead ? notif : { ...notif, isRead: true },
+        ),
+        unreadCount: 0,
+        mutationRevision: state.mutationRevision + 1,
+      }
+    })
   },
 
   resetNotifs: () => set(initialNotifState),
