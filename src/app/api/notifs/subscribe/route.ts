@@ -114,7 +114,7 @@ function logSseEvent(frame: string): void {
     }
   }
 
-  if (dataLines.length === 0) return
+  if (event === 'ping' || dataLines.length === 0) return
 
   const rawData = dataLines.join('\n')
   let data: unknown = rawData
@@ -122,7 +122,7 @@ function logSseEvent(frame: string): void {
   try {
     data = JSON.parse(rawData)
   } catch {
-    // connect/ping처럼 JSON이 아닌 SSE data는 문자열 그대로 확인한다.
+    // connect처럼 JSON이 아닌 SSE data는 문자열 그대로 확인한다.
   }
 
   console.info('[notif:sse:upstream]', { event, data })
