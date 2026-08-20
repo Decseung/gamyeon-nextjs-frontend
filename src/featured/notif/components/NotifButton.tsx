@@ -38,6 +38,7 @@ export function NotifButton() {
         router.push(`/report/${notif.targetId}`)
         break
       case 'REPORT_PROCESSING':
+        break
       case 'REPORT_FAILED':
         router.push('/history')
         break
@@ -72,7 +73,7 @@ export function NotifButton() {
             <button
               type="button"
               onClick={handleMarkAllAsRead}
-              className="text-muted-foreground hover:text-foreground text-xs transition"
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition"
             >
               모두 읽음
             </button>
