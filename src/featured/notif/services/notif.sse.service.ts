@@ -1,24 +1,18 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import type { Notif } from '../types'
 
-const NOTIF_SUBSCRIBE_ENDPOINT = '/api/v1/notifs/subscribe'
+const NOTIF_SUBSCRIBE_ENDPOINT = '/api/notifs/subscribe'
 const RECONNECT_INTERVAL_MS = 3000
 
 class FatalSseError extends Error {}
 
 export interface SubscribeNotifsOptions {
-  accessToken: string
   onConnected?: () => void
   onNotif: (notif: Notif) => void
   onUnauthorized?: () => void
 }
 
 let activeController: AbortController | null = null
-
-function getSubscribeUrl(): string {
-  const baseUrl = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
-  return `${baseUrl}${NOTIF_SUBSCRIBE_ENDPOINT}`
-}
 
 function isNotifType(value: unknown): value is Notif['notifType'] {
   return (
@@ -54,7 +48,6 @@ function isNotif(value: unknown): value is Notif {
  * 반환된 cleanup 함수를 호출하면 현재 연결과 예약된 재연결을 모두 종료한다.
  */
 export function subscribeNotifs({
-  accessToken,
   onConnected,
   onNotif,
   onUnauthorized,
@@ -81,10 +74,10 @@ export function subscribeNotifs({
     }
   }
 
-  void fetchEventSource(getSubscribeUrl(), {
+  void fetchEventSource(NOTIF_SUBSCRIBE_ENDPOINT, {
     method: 'GET',
+    credentials: 'same-origin',
     headers: {
-      Authorization: `Bearer ${accessToken}`,
       accept: EventStreamContentType,
     },
     signal: controller.signal,
@@ -136,7 +129,7 @@ export function subscribeNotifs({
       }
 
       if (!isNotif(parsed)) {
-        console.error('유효하지 않은 알림 SSE 데이터입니다.', parsed)
+        console.error('유효하지 않은 알림 SSE 데이터입니다.')
         return
       }
 
