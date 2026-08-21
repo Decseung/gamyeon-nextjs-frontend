@@ -1,32 +1,34 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
-import { MOCK_NOTIFS } from '../constants'
+import { useNotifActions } from '../hooks/useNotifActions'
+import { useNotifStore } from '../store'
 import type { Notif } from '../types'
 import { NotifList } from './NotifList'
 
 export function NotifButton() {
   const router = useRouter()
-  const [notifs, setNotifs] = useState<Notif[]>(MOCK_NOTIFS)
-  const unreadCount = notifs.filter((notif) => !notif.isRead).length
+  const notifs = useNotifStore((state) => state.notifs)
+  const unreadCount = useNotifStore((state) => state.unreadCount)
+  const hasMore = useNotifStore((state) => state.hasMore)
+  const isLoading = useNotifStore((state) => state.isLoading)
+  const isLoadingMore = useNotifStore((state) => state.isLoadingMore)
+  const { fetchMoreNotifs, markAsRead, markAllAsRead } = useNotifActions()
 
-  const markAllRead = () => {
-    setNotifs((prev) => prev.map((notif) => ({ ...notif, isRead: true })))
-  }
-
-  const markAsRead = (selectedNotif: Notif) => {
-    setNotifs((prev) =>
-      prev.map((notif) =>
-        notif.notifId === selectedNotif.notifId ? { ...notif, isRead: true } : notif,
-      ),
-    )
+  const handleMarkAllAsRead = () => {
+    void markAllAsRead().catch((error: unknown) => {
+      console.error('알림을 모두 읽음 처리하지 못했습니다.', error)
+    })
   }
 
   const handleNotifClick = (notif: Notif) => {
-    markAsRead(notif)
+    if (!notif.isRead) {
+      void markAsRead(notif.notifId).catch((error: unknown) => {
+        console.error('알림을 읽음 처리하지 못했습니다.', error)
+      })
+    }
 
     switch (notif.notifType) {
       case 'NOTICE':
@@ -36,10 +38,17 @@ export function NotifButton() {
         router.push(`/report/${notif.targetId}`)
         break
       case 'REPORT_PROCESSING':
+        break
       case 'REPORT_FAILED':
         router.push('/history')
         break
     }
+  }
+
+  const handleLoadMore = () => {
+    void fetchMoreNotifs().catch((error: unknown) => {
+      console.error('알림을 추가로 불러오지 못했습니다.', error)
+    })
   }
 
   return (
@@ -62,14 +71,22 @@ export function NotifButton() {
           <span className="text-sm font-semibold">알림</span>
           {unreadCount > 0 && (
             <button
-              onClick={markAllRead}
-              className="text-muted-foreground hover:text-foreground text-xs transition"
+              type="button"
+              onClick={handleMarkAllAsRead}
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition"
             >
               모두 읽음
             </button>
           )}
         </div>
-        <NotifList notifs={notifs} onNotifClick={handleNotifClick} />
+        <NotifList
+          notifs={notifs}
+          hasMore={hasMore}
+          isLoading={isLoading}
+          isLoadingMore={isLoadingMore}
+          onNotifClick={handleNotifClick}
+          onLoadMore={handleLoadMore}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   )

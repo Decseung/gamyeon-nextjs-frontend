@@ -1,3 +1,4 @@
+import { MoveRight } from 'lucide-react'
 import { NOTIF_STYLE_CONFIG } from '../constants'
 import type { Notif } from '../types'
 import { cn } from '@/shared/lib/utils'
@@ -10,6 +11,7 @@ interface NotifItemProps {
 
 export function NotifItem({ notif, onClick }: NotifItemProps) {
   const { icon: Icon, color } = NOTIF_STYLE_CONFIG[notif.notifType]
+  const isNavigable = notif.notifType !== 'REPORT_PROCESSING'
 
   return (
     <li className="border-border/40 border-b last:border-b-0">
@@ -17,8 +19,8 @@ export function NotifItem({ notif, onClick }: NotifItemProps) {
         type="button"
         onClick={() => onClick(notif)}
         className={cn(
-          'hover:bg-muted/60 focus-visible:ring-primary/40 flex w-full cursor-pointer gap-3 px-4 py-3 text-left transition focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-          !notif.isRead && 'bg-primary/5',
+          'focus-visible:ring-primary/40 flex w-full cursor-pointer gap-3 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+          notif.isRead ? 'hover:bg-muted/60' : 'bg-primary/10 hover:bg-primary/15',
         )}
       >
         <div className={cn('mt-0.5 shrink-0', color)}>
@@ -41,6 +43,12 @@ export function NotifItem({ notif, onClick }: NotifItemProps) {
             {formatMonthDayTimeKorean(notif.createdAt)}
           </time>
         </div>
+        {isNavigable && (
+          <MoveRight
+            aria-hidden="true"
+            className="text-muted-foreground/60 h-4 w-4 shrink-0 self-center"
+          />
+        )}
       </button>
     </li>
   )

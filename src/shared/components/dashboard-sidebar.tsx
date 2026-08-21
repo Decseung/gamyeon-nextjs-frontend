@@ -66,6 +66,7 @@ export function DashboardSidebar({ pausedRecords }: DashboardSidebarProps) {
                   alt="Gamyeon logo"
                   width={1024}
                   height={768}
+                  loading="eager"
                   style={{ height: '28px', width: 'auto' }}
                 />
               </motion.div>
