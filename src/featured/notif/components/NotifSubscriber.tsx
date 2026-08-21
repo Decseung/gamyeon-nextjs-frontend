@@ -1,40 +1,47 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/featured/auth/store'
-import { useNotifActions } from '../hooks/useNotifActions'
-import { subscribeNotifs } from '../services/notif.sse.service'
+import { invalidateNotifSession, useNotifActions } from '../hooks/useNotifActions'
+import { disconnectNotifsImmediately, subscribeNotifs } from '../services/notif.sse.service'
 import { useNotifStore } from '../store'
 
 export function NotifSubscriber() {
+  const userId = useAuthStore((state) => state.user?.id)
   const logout = useAuthStore((state) => state.logout)
   const { fetchInitialNotifs } = useNotifActions()
+  const previousSessionKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const controller = new AbortController()
+    const sessionKey = userId === undefined ? null : String(userId)
+
+    if (previousSessionKeyRef.current && previousSessionKeyRef.current !== sessionKey) {
+      disconnectNotifsImmediately()
+      invalidateNotifSession()
+      useNotifStore.getState().resetNotifs()
+    }
+
+    previousSessionKeyRef.current = sessionKey
+
+    if (!sessionKey) return
+
     let isActive = true
-    let hasConnectedOnce = false
 
     const requestSync = () => {
-      void fetchInitialNotifs(controller.signal).catch((error: unknown) => {
+      void fetchInitialNotifs(sessionKey).catch((error: unknown) => {
         if (isActive) {
           console.error('알림 목록을 불러오지 못했습니다.', error)
         }
       })
     }
 
-    // SSE 연결 여부와 무관하게 기존 알림 목록은 즉시 조회한다.
+    // 최초 목록 조회와 SSE 재연결 후 누락 보정을 같은 in-flight 요청으로 합친다.
     requestSync()
 
     const cleanupSubscription = subscribeNotifs({
-      onConnected: () => {
-        // 최초 연결은 mount 시 시작한 조회가 담당하고, 재연결부터 최신 목록을 동기화한다.
-        if (!hasConnectedOnce) {
-          hasConnectedOnce = true
-          return
-        }
-
-        requestSync()
+      sessionKey,
+      onConnected: (isReconnect) => {
+        if (isReconnect) requestSync()
       },
       onNotif: (notif) => {
         if (isActive) {
@@ -45,7 +52,9 @@ export function NotifSubscriber() {
         if (!isActive) return
 
         isActive = false
-        controller.abort()
+        previousSessionKeyRef.current = null
+        disconnectNotifsImmediately()
+        invalidateNotifSession()
         useNotifStore.getState().resetNotifs()
         logout()
         window.location.replace('/api/auth/logout?redirectTo=/signin')
@@ -54,10 +63,9 @@ export function NotifSubscriber() {
 
     return () => {
       isActive = false
-      controller.abort()
       cleanupSubscription()
     }
-  }, [fetchInitialNotifs, logout])
+  }, [fetchInitialNotifs, logout, userId])
 
   return null
 }

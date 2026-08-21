@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
+import { useAuthStore } from '@/featured/auth/store'
 import type { ApiResponse } from '@/shared/lib/api'
 import {
   getNotifsAction,
@@ -11,6 +12,20 @@ import { useNotifStore } from '../store'
 import type { NotifListData } from '../types'
 
 const MUTATION_SETTLE_DELAY_MS = 250
+
+interface InitialNotifLoad {
+  sessionKey: string
+  generation: number
+  promise: Promise<void>
+}
+
+interface NotifSessionSnapshot {
+  sessionKey: string
+  generation: number
+}
+
+let initialNotifLoad: InitialNotifLoad | null = null
+let notifSessionGeneration = 0
 
 class NotifActionError extends Error {
   readonly code: string
@@ -47,38 +62,48 @@ function getNotifListData(
   return response.data
 }
 
-function assertNotifActionSuccess(
-  response: ApiResponse<unknown>,
-  fallbackMessage: string,
-): void {
+function assertNotifActionSuccess(response: ApiResponse<unknown>, fallbackMessage: string): void {
   if (!response.success) {
     throw createNotifActionError(response, fallbackMessage)
   }
 }
 
-function waitForDelay(delayMs: number, signal?: AbortSignal): Promise<boolean> {
-  if (signal?.aborted) return Promise.resolve(false)
-
-  return new Promise((resolve) => {
-    const handleAbort = () => {
-      clearTimeout(timeoutId)
-      resolve(false)
-    }
-    const timeoutId = setTimeout(() => {
-      signal?.removeEventListener('abort', handleAbort)
-      resolve(true)
-    }, delayMs)
-
-    signal?.addEventListener('abort', handleAbort, { once: true })
-  })
+function waitForDelay(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs))
 }
 
-async function waitForNotifMutationsToSettle(signal?: AbortSignal): Promise<boolean> {
+function getCurrentNotifSession(): NotifSessionSnapshot | null {
+  const authState = useAuthStore.getState()
+
+  if (!authState.isLoggedIn || authState.user === null) return null
+
+  return {
+    sessionKey: String(authState.user.id),
+    generation: notifSessionGeneration,
+  }
+}
+
+function isCurrentNotifSession(sessionKey: string, generation: number): boolean {
+  const authState = useAuthStore.getState()
+
+  return (
+    notifSessionGeneration === generation &&
+    authState.isLoggedIn &&
+    authState.user !== null &&
+    String(authState.user.id) === sessionKey
+  )
+}
+
+async function waitForNotifMutationsToSettle(
+  sessionKey: string,
+  generation: number,
+): Promise<boolean> {
   let lastRevision = useNotifStore.getState().mutationRevision
 
-  while (!signal?.aborted) {
-    const completed = await waitForDelay(MUTATION_SETTLE_DELAY_MS, signal)
-    if (!completed) return false
+  while (isCurrentNotifSession(sessionKey, generation)) {
+    await waitForDelay(MUTATION_SETTLE_DELAY_MS)
+
+    if (!isCurrentNotifSession(sessionKey, generation)) return false
 
     const currentRevision = useNotifStore.getState().mutationRevision
     if (currentRevision === lastRevision) return true
@@ -89,32 +114,74 @@ async function waitForNotifMutationsToSettle(signal?: AbortSignal): Promise<bool
   return false
 }
 
-export function useNotifActions() {
-  const fetchInitialNotifs = useCallback(async (signal?: AbortSignal) => {
-    if (signal?.aborted || !useNotifStore.getState().beginInitialLoad()) return
+async function performInitialNotifLoad(sessionKey: string, generation: number): Promise<void> {
+  if (
+    !isCurrentNotifSession(sessionKey, generation) ||
+    !useNotifStore.getState().beginInitialLoad()
+  ) {
+    return
+  }
 
-    try {
-      while (!signal?.aborted) {
-        const revisionAtRequestStart = useNotifStore.getState().mutationRevision
-        const response = await getNotifsAction()
-        const data = getNotifListData(response, '알림 목록을 불러오지 못했습니다.')
+  try {
+    while (isCurrentNotifSession(sessionKey, generation)) {
+      const revisionAtRequestStart = useNotifStore.getState().mutationRevision
+      const response = await getNotifsAction()
 
-        if (signal?.aborted) return
+      if (!isCurrentNotifSession(sessionKey, generation)) return
 
-        if (useNotifStore.getState().mutationRevision === revisionAtRequestStart) {
-          useNotifStore.getState().applyInitialNotifs(data)
-          return
-        }
+      const data = getNotifListData(response, '알림 목록을 불러오지 못했습니다.')
 
-        const hasSettled = await waitForNotifMutationsToSettle(signal)
-        if (!hasSettled) return
+      if (useNotifStore.getState().mutationRevision === revisionAtRequestStart) {
+        useNotifStore.getState().applyInitialNotifs(data)
+        return
       }
-    } finally {
-      useNotifStore.getState().finishInitialLoad()
+
+      const hasSettled = await waitForNotifMutationsToSettle(sessionKey, generation)
+      if (!hasSettled) return
     }
-  }, [])
+  } finally {
+    useNotifStore.getState().finishInitialLoad()
+  }
+}
+
+function requestInitialNotifs(sessionKey: string): Promise<void> {
+  const generation = notifSessionGeneration
+
+  if (initialNotifLoad?.sessionKey === sessionKey && initialNotifLoad.generation === generation) {
+    return initialNotifLoad.promise
+  }
+
+  if (initialNotifLoad) {
+    return initialNotifLoad.promise
+      .catch(() => undefined)
+      .then(() => requestInitialNotifs(sessionKey))
+  }
+
+  const promise = performInitialNotifLoad(sessionKey, generation).finally(() => {
+    if (initialNotifLoad?.promise === promise) {
+      initialNotifLoad = null
+    }
+  })
+
+  initialNotifLoad = { sessionKey, generation, promise }
+  return promise
+}
+
+/** 인증 경계가 바뀐 뒤 이전 세션의 비동기 결과가 store에 적용되지 않게 한다. */
+export function invalidateNotifSession(): void {
+  notifSessionGeneration += 1
+}
+
+export function useNotifActions() {
+  const fetchInitialNotifs = useCallback(
+    (sessionKey: string) => requestInitialNotifs(sessionKey),
+    [],
+  )
 
   const fetchMoreNotifs = useCallback(async () => {
+    const session = getCurrentNotifSession()
+    if (!session) return
+
     const cursorId = useNotifStore.getState().beginMoreLoad()
 
     if (cursorId === null) return
@@ -123,25 +190,41 @@ export function useNotifActions() {
       const response = await getNotifsAction({ cursorId })
       const data = getNotifListData(response, '알림 목록을 추가로 불러오지 못했습니다.')
 
+      if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
       useNotifStore.getState().appendNotifs(data)
     } finally {
-      useNotifStore.getState().finishMoreLoad()
+      if (isCurrentNotifSession(session.sessionKey, session.generation)) {
+        useNotifStore.getState().finishMoreLoad()
+      }
     }
   }, [])
 
   const markAsRead = useCallback(async (notifId: number) => {
+    const session = getCurrentNotifSession()
+    if (!session) return
+
     const targetNotif = useNotifStore.getState().notifs.find((notif) => notif.notifId === notifId)
 
     if (!targetNotif || targetNotif.isRead) return
 
     const response = await markNotifAsReadAction(notifId)
     assertNotifActionSuccess(response, '알림을 읽음 처리하지 못했습니다.')
+
+    if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
     useNotifStore.getState().markNotifAsRead(notifId)
   }, [])
 
   const markAllAsRead = useCallback(async () => {
+    const session = getCurrentNotifSession()
+    if (!session) return
+
     const response = await markAllNotifsAsReadAction()
     assertNotifActionSuccess(response, '알림을 모두 읽음 처리하지 못했습니다.')
+
+    if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
     useNotifStore.getState().markAllNotifsAsRead()
   }, [])
 
