@@ -6,7 +6,13 @@ import { invalidateNotifSession, useNotifActions } from '../hooks/useNotifAction
 import { disconnectNotifsImmediately, subscribeNotifs } from '../services/notif.sse.service'
 import { useNotifStore } from '../store'
 
-export function NotifSubscriber() {
+interface NotifSubscriberProps {
+  unauthorizedBehavior?: 'redirect-to-signin' | 'stay-on-page'
+}
+
+export function NotifSubscriber({
+  unauthorizedBehavior = 'redirect-to-signin',
+}: NotifSubscriberProps = {}) {
   const userId = useAuthStore((state) => state.user?.id)
   const logout = useAuthStore((state) => state.logout)
   const { fetchInitialNotifs } = useNotifActions()
@@ -57,7 +63,9 @@ export function NotifSubscriber() {
         invalidateNotifSession()
         useNotifStore.getState().resetNotifs()
         logout()
-        window.location.replace('/api/auth/logout?redirectTo=/signin')
+        if (unauthorizedBehavior === 'redirect-to-signin') {
+          window.location.replace('/api/auth/logout?redirectTo=/signin')
+        }
       },
     })
 
@@ -65,7 +73,7 @@ export function NotifSubscriber() {
       isActive = false
       cleanupSubscription()
     }
-  }, [fetchInitialNotifs, logout, userId])
+  }, [fetchInitialNotifs, logout, unauthorizedBehavior, userId])
 
   return null
 }
