@@ -1,17 +1,33 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import type { Notif } from '../types'
 
-const NOTIF_SUBSCRIBE_ENDPOINT = '/api/notifs/subscribe'
+function getNotifSubscribeEndpoint(): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '')
+  if (!apiUrl) {
+    throw new Error('NEXT_PUBLIC_API_URL이 설정되지 않았습니다.')
+  }
+
+  return `${apiUrl}/api/v1/notifs/subscribe`
+}
+
+const NOTIF_SUBSCRIBE_ENDPOINT = getNotifSubscribeEndpoint()
 const RECONNECT_INTERVAL_MS = 3000
 const DISCONNECT_GRACE_MS = 300
 
 class FatalSseError extends Error {}
+class RetrySseError extends Error {
+  constructor(readonly retryAfterMs: number) {
+    super('알림 SSE 인증 갱신 후 재연결합니다.')
+  }
+}
+
+export type SseAuthRecoveryResult = 'refreshed' | 'invalid' | 'unavailable'
 
 export interface SubscribeNotifsOptions {
   sessionKey: string
   onConnected?: (isReconnect: boolean) => void
   onNotif: (notif: Notif) => void
-  onUnauthorized?: () => void
+  onAuthRequired?: () => Promise<SseAuthRecoveryResult>
 }
 
 type NotifSubscriber = SubscribeNotifsOptions
@@ -89,6 +105,14 @@ function dispatchToSubscribers(callback: (subscriber: NotifSubscriber) => void):
   }
 }
 
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel()
+  } catch {
+    // The response body may already be closed by the browser.
+  }
+}
+
 function startConnection(): void {
   if (activeController || !activeSessionKey || subscribers.size === 0) return
 
@@ -96,13 +120,13 @@ function startConnection(): void {
   const generation = ++connectionGeneration
   let hasConnectedForCurrentRequest = false
   let hasConnectedOnce = false
-  let hasHandledUnauthorized = false
+  let hasAttemptedAuthRecovery = false
 
   activeController = controller
 
   void fetchEventSource(NOTIF_SUBSCRIBE_ENDPOINT, {
     method: 'GET',
-    credentials: 'same-origin',
+    credentials: 'include',
     headers: {
       accept: EventStreamContentType,
     },
@@ -112,20 +136,39 @@ function startConnection(): void {
       if (!isCurrentConnection(controller, generation) || controller.signal.aborted) return
 
       if (response.status === 401) {
-        if (hasHandledUnauthorized) return
+        await cancelResponseBody(response)
 
-        hasHandledUnauthorized = true
-        const unauthorizedSubscriber = Array.from(subscribers).find(
-          (subscriber) => subscriber.onUnauthorized,
-        )
-        stopConnection(true)
-
-        try {
-          unauthorizedSubscriber?.onUnauthorized?.()
-        } catch (error) {
-          console.error('알림 SSE 인증 만료 처리를 수행하지 못했습니다.', error)
+        if (hasAttemptedAuthRecovery) {
+          throw new FatalSseError('인증 갱신 후에도 알림 SSE 연결이 거부되었습니다.')
         }
-        return
+
+        hasAttemptedAuthRecovery = true
+        const authSubscriber = Array.from(subscribers).find(
+          (subscriber) => subscriber.onAuthRequired,
+        )
+
+        if (!authSubscriber?.onAuthRequired) {
+          throw new FatalSseError('알림 SSE 인증을 갱신할 수 없습니다.')
+        }
+
+        let recoveryResult: SseAuthRecoveryResult
+        try {
+          recoveryResult = await authSubscriber.onAuthRequired()
+        } catch (error) {
+          console.error('알림 SSE 인증 갱신 요청을 수행하지 못했습니다.', error)
+          throw new FatalSseError('알림 SSE 인증 갱신 요청에 실패했습니다.')
+        }
+
+        if (recoveryResult === 'refreshed') {
+          throw new RetrySseError(0)
+        }
+
+        if (recoveryResult === 'invalid') {
+          stopConnection(true)
+          return
+        }
+
+        throw new FatalSseError('인증 서버를 일시적으로 사용할 수 없습니다.')
       }
 
       if (response.status >= 400 && response.status < 500 && response.status !== 429) {
@@ -137,6 +180,7 @@ function startConnection(): void {
         throw new Error(`알림 SSE 연결에 실패했습니다. (HTTP ${response.status})`)
       }
 
+      hasAttemptedAuthRecovery = false
       hasConnectedForCurrentRequest = false
     },
     onmessage(event) {
@@ -176,6 +220,7 @@ function startConnection(): void {
     },
     onerror(error: unknown) {
       if (!isCurrentConnection(controller, generation) || controller.signal.aborted) return
+      if (error instanceof RetrySseError) return error.retryAfterMs
       if (error instanceof FatalSseError) throw error
       return RECONNECT_INTERVAL_MS
     },

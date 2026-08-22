@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { refreshAuthSession } from '@/featured/auth/actions/auth.action'
 import { useAuthStore } from '@/featured/auth/store'
 import { invalidateNotifSession, useNotifActions } from '../hooks/useNotifActions'
 import { disconnectNotifsImmediately, subscribeNotifs } from '../services/notif.sse.service'
@@ -54,8 +55,9 @@ export function NotifSubscriber({
           useNotifStore.getState().prependNotif(notif)
         }
       },
-      onUnauthorized: () => {
-        if (!isActive) return
+      onAuthRequired: async () => {
+        const result = await refreshAuthSession()
+        if (result.status !== 'invalid' || !isActive) return result.status
 
         isActive = false
         previousSessionKeyRef.current = null
@@ -66,6 +68,8 @@ export function NotifSubscriber({
         if (unauthorizedBehavior === 'redirect-to-signin') {
           window.location.replace('/api/auth/logout?redirectTo=/signin')
         }
+
+        return result.status
       },
     })
 
