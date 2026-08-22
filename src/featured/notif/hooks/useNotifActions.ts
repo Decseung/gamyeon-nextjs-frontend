@@ -9,7 +9,7 @@ import {
   markNotifAsReadAction,
 } from '../actions/notif.action'
 import { useNotifStore } from '../store'
-import type { NotifListData } from '../types'
+import type { NotifListData, NotifReadAllSnapshot } from '../types'
 
 const MUTATION_SETTLE_DELAY_MS = 250
 
@@ -186,11 +186,15 @@ export function useNotifActions() {
 
     if (cursorId === null) return
 
+    const revisionAtRequestStart = useNotifStore.getState().mutationRevision
+
     try {
       const response = await getNotifsAction({ cursorId })
       const data = getNotifListData(response, '알림 목록을 추가로 불러오지 못했습니다.')
 
       if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
+      if (useNotifStore.getState().mutationRevision !== revisionAtRequestStart) return
 
       useNotifStore.getState().appendNotifs(data)
     } finally {
@@ -206,30 +210,70 @@ export function useNotifActions() {
 
     const targetNotif = useNotifStore.getState().notifs.find((notif) => notif.notifId === notifId)
 
-    if (!targetNotif || targetNotif.isRead) return
+    if (!targetNotif) return
+
+    const removedNotif = useNotifStore.getState().beginNotifRead(notifId)
+    if (!removedNotif) return
+
+    try {
+      const response = await markNotifAsReadAction(notifId)
+      assertNotifActionSuccess(response, '알림을 읽음 처리하지 못했습니다.')
+
+      if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
+      useNotifStore.getState().confirmNotifRead(notifId)
+    } catch (error) {
+      if (isCurrentNotifSession(session.sessionKey, session.generation)) {
+        useNotifStore.getState().rollbackNotifRead(removedNotif)
+      }
+
+      throw error
+    }
+  }, [])
+
+  const markProcessingAsRead = useCallback(async (notifId: number) => {
+    const session = getCurrentNotifSession()
+    if (!session) return
+
+    const targetNotif = useNotifStore.getState().notifs.find((notif) => notif.notifId === notifId)
+
+    if (!targetNotif || targetNotif.notifType !== 'REPORT_PROCESSING' || targetNotif.isRead) return
 
     const response = await markNotifAsReadAction(notifId)
     assertNotifActionSuccess(response, '알림을 읽음 처리하지 못했습니다.')
 
     if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
 
-    useNotifStore.getState().markNotifAsRead(notifId)
+    useNotifStore.getState().markNotifAsReadInPlace(notifId)
   }, [])
 
   const markAllAsRead = useCallback(async () => {
     const session = getCurrentNotifSession()
     if (!session) return
 
+    const notifState = useNotifStore.getState()
+    const snapshot: NotifReadAllSnapshot = {
+      notifIds: notifState.notifs.map((notif) => notif.notifId),
+      pendingReadNotifIds: Array.from(notifState.pendingReadNotifIds),
+      unreadCount: notifState.unreadCount,
+    }
+
     const response = await markAllNotifsAsReadAction()
     assertNotifActionSuccess(response, '알림을 모두 읽음 처리하지 못했습니다.')
 
     if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
 
-    useNotifStore.getState().markAllNotifsAsRead()
+    useNotifStore.getState().removeNotifsAsRead(snapshot)
   }, [])
 
   return useMemo(
-    () => ({ fetchInitialNotifs, fetchMoreNotifs, markAsRead, markAllAsRead }),
-    [fetchInitialNotifs, fetchMoreNotifs, markAllAsRead, markAsRead],
+    () => ({
+      fetchInitialNotifs,
+      fetchMoreNotifs,
+      markAsRead,
+      markProcessingAsRead,
+      markAllAsRead,
+    }),
+    [fetchInitialNotifs, fetchMoreNotifs, markAllAsRead, markAsRead, markProcessingAsRead],
   )
 }
