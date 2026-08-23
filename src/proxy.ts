@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { reissue } from '@/shared/lib/auth/reissue'
-import { setAuthTokenCookies } from '@/shared/lib/auth/cookies'
+import { clearAuthTokenCookies, setAuthTokenCookies } from '@/shared/lib/auth/cookies'
 
 const PUBLIC_PATHS = ['/', '/signin', '/terms', '/privacy']
 
@@ -57,8 +57,7 @@ export async function proxy(request: NextRequest) {
       `[proxy] reissue invalid, 로그아웃 처리: ${pathname} code=${result.code} message=${result.message}`,
     )
     const response = NextResponse.redirect(new URL('/signin', request.url))
-    response.cookies.delete('accessToken')
-    response.cookies.delete('refreshToken')
+    clearAuthTokenCookies(response.cookies)
     return response
   }
 
