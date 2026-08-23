@@ -4,7 +4,7 @@ import { ApiResponse, NetworkError } from './types'
 import type { RequestConfig } from './types'
 import { buildUrl, handleResponse, serializeBody } from './_utils'
 import { reissue } from '@/shared/lib/auth/reissue'
-import { setAuthTokenCookies } from '@/shared/lib/auth/cookies'
+import { clearAuthTokenCookies, setAuthTokenCookies } from '@/shared/lib/auth/cookies'
 
 type TryRefreshResult =
   | { ok: true; accessToken: string }
@@ -108,8 +108,7 @@ async function serverFetch<T>(
         throw new NetworkError()
       }
       try {
-        cookieStore.delete('accessToken')
-        cookieStore.delete('refreshToken')
+        clearAuthTokenCookies(cookieStore)
       } catch {
         // RSC 컨텍스트에서는 쿠키 삭제 불가 — proxy 루프 방지 불가
       }

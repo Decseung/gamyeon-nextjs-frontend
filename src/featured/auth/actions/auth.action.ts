@@ -8,7 +8,11 @@ import { withAction } from '@/shared/lib/withAction'
 import type { ApiResponse } from '@/shared/lib/api'
 import type { User } from '@/featured/auth/types'
 import { reissue } from '@/shared/lib/auth/reissue'
-import { setAuthTokenCookies } from '@/shared/lib/auth/cookies'
+import {
+  clearAccessTokenCookie,
+  clearAuthTokenCookies,
+  setAuthTokenCookies,
+} from '@/shared/lib/auth/cookies'
 
 export type OptionalSessionResult =
   | { status: 'authenticated'; user: User }
@@ -54,7 +58,7 @@ export async function refreshAuthSession(): Promise<RefreshAuthSessionResult> {
   const refreshToken = cookieStore.get('refreshToken')?.value
 
   if (!refreshToken) {
-    cookieStore.delete('accessToken')
+    clearAccessTokenCookie(cookieStore)
     return { status: 'invalid' }
   }
 
@@ -64,8 +68,7 @@ export async function refreshAuthSession(): Promise<RefreshAuthSessionResult> {
       return { status: 'unavailable' }
     }
 
-    cookieStore.delete('accessToken')
-    cookieStore.delete('refreshToken')
+    clearAuthTokenCookies(cookieStore)
     return { status: 'invalid' }
   }
 
@@ -75,16 +78,14 @@ export async function refreshAuthSession(): Promise<RefreshAuthSessionResult> {
 
 export async function logoutAction() {
   const cookieStore = await cookies()
-  cookieStore.delete('accessToken')
-  cookieStore.delete('refreshToken')
+  clearAuthTokenCookies(cookieStore)
 }
 
 export async function withdrawUserAction(): Promise<ApiResponse<null>> {
   return withAction<null>(async () => {
     await withdrawUser()
     const cookieStore = await cookies()
-    cookieStore.delete('accessToken')
-    cookieStore.delete('refreshToken')
+    clearAuthTokenCookies(cookieStore)
     redirect('/signin?withdrawal=complete')
   })
 }

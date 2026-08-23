@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { setAuthTokenCookies } from '@/shared/lib/auth/cookies'
+import { clearAuthTokenCookies, setAuthTokenCookies } from '@/shared/lib/auth/cookies'
 import { reissue } from '@/shared/lib/auth/reissue'
 
 export const runtime = 'nodejs'
@@ -40,8 +40,7 @@ function errorResponse(status: number, code: string): NextResponse {
 }
 
 function clearAuthCookies(response: NextResponse): NextResponse {
-  response.cookies.delete('accessToken')
-  response.cookies.delete('refreshToken')
+  clearAuthTokenCookies(response.cookies)
   return response
 }
 
