@@ -17,6 +17,7 @@ export interface Notif {
 
 /** GET /api/v1/notifs의 data 필드 */
 export interface NotifListData {
+  /** 페이지 크기와 무관한 현재 사용자의 전체 미읽음 알림 수 */
   unreadCount: number
   notifs: Notif[]
   /** 백엔드가 hasNext 제공하면 다음 커서 페이지 존재 여부를 우선 사용한다. */
@@ -31,6 +32,12 @@ export interface GetNotifsParams {
   size?: number
 }
 
+export interface NotifReadAllSnapshot {
+  notifIds: number[]
+  pendingReadNotifIds: number[]
+  unreadCount: number
+}
+
 /** 알림 목록과 읽음 상태를 관리하는 전역 Zustand 상태의 형태 */
 export interface NotifState {
   notifs: Notif[]
@@ -40,6 +47,7 @@ export interface NotifState {
   isLoading: boolean
   isLoadingMore: boolean
   mutationRevision: number
+  pendingReadNotifIds: ReadonlySet<number>
   beginInitialLoad: () => boolean
   finishInitialLoad: () => void
   applyInitialNotifs: (data: NotifListData) => void
@@ -47,7 +55,10 @@ export interface NotifState {
   finishMoreLoad: () => void
   appendNotifs: (data: NotifListData) => void
   prependNotif: (notif: Notif) => void
-  markNotifAsRead: (notifId: number) => void
-  markAllNotifsAsRead: () => void
+  beginNotifRead: (notifId: number) => Notif | null
+  confirmNotifRead: (notifId: number) => void
+  rollbackNotifRead: (notif: Notif) => void
+  markNotifAsReadInPlace: (notifId: number) => void
+  removeNotifsAsRead: (snapshot: NotifReadAllSnapshot) => void
   resetNotifs: () => void
 }

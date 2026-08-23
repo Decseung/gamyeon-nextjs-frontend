@@ -12,16 +12,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
+import { logoutAction } from '@/featured/auth/actions/auth.action'
 import { useAuthStore } from '@/featured/auth/store'
+import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
+import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
+import { useNotifStore } from '@/featured/notif/store'
 
 export function ReportHeader() {
-  const { user, logout } = useAuthStore()
+  const { user, logout: clearAuthStore } = useAuthStore()
   const router = useRouter()
   const initials = user?.nickname ? user.nickname.slice(0, 1) : 'U'
 
-  const handleLogout = () => {
-    logout()
-    router.push('/')
+  const handleLogout = async () => {
+    disconnectNotifsImmediately()
+    invalidateNotifSession()
+    useNotifStore.getState().resetNotifs()
+
+    try {
+      await logoutAction()
+    } finally {
+      clearAuthStore()
+      router.push('/signin')
+    }
   }
 
   return (
@@ -66,7 +78,7 @@ export function ReportHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive cursor-pointer gap-2"
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
             >
               <LogOut className="h-4 w-4" />
               로그아웃

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
@@ -10,12 +11,19 @@ import { NotifList } from './NotifList'
 
 export function NotifButton() {
   const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
   const notifs = useNotifStore((state) => state.notifs)
   const unreadCount = useNotifStore((state) => state.unreadCount)
   const hasMore = useNotifStore((state) => state.hasMore)
   const isLoading = useNotifStore((state) => state.isLoading)
   const isLoadingMore = useNotifStore((state) => state.isLoadingMore)
-  const { fetchMoreNotifs, markAsRead, markAllAsRead } = useNotifActions()
+  const { fetchMoreNotifs, markAsRead, markProcessingAsRead, markAllAsRead } = useNotifActions()
+  const badgeClassName =
+    unreadCount > 99
+      ? 'top-0 right-0 h-5 w-5 text-[8px]'
+      : unreadCount > 9
+        ? 'top-0 right-0 h-5 w-5 text-[9px]'
+        : 'top-0.5 right-0.5 h-4 w-4 text-[10px]'
 
   const handleMarkAllAsRead = () => {
     void markAllAsRead().catch((error: unknown) => {
@@ -24,6 +32,17 @@ export function NotifButton() {
   }
 
   const handleNotifClick = (notif: Notif) => {
+    if (notif.notifType === 'REPORT_PROCESSING') {
+      if (notif.isRead) return
+
+      void markProcessingAsRead(notif.notifId).catch((error: unknown) => {
+        console.error('알림을 읽음 처리하지 못했습니다.', error)
+      })
+      return
+    }
+
+    setIsOpen(false)
+
     if (!notif.isRead) {
       void markAsRead(notif.notifId).catch((error: unknown) => {
         console.error('알림을 읽음 처리하지 못했습니다.', error)
@@ -32,12 +51,10 @@ export function NotifButton() {
 
     switch (notif.notifType) {
       case 'NOTICE':
-        router.push('/notices')
+        router.push(`/notices/${notif.targetId}`)
         break
       case 'REPORT_SUCCESS':
         router.push(`/report/${notif.targetId}`)
-        break
-      case 'REPORT_PROCESSING':
         break
       case 'REPORT_FAILED':
         router.push('/history')
@@ -52,7 +69,7 @@ export function NotifButton() {
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           className="text-muted-foreground hover:bg-muted hover:text-foreground relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors outline-none"
@@ -60,8 +77,10 @@ export function NotifButton() {
         >
           <Bell className="h-4.5 w-4.5" />
           {unreadCount > 0 && (
-            <span className="bg-primary text-primary-foreground absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold">
-              {unreadCount > 9 ? '9+' : unreadCount}
+            <span
+              className={`bg-primary text-primary-foreground absolute flex items-center justify-center rounded-full leading-none font-bold tabular-nums ${badgeClassName}`}
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </button>
