@@ -114,6 +114,12 @@ async function waitForNotifMutationsToSettle(
   return false
 }
 
+/** pending 읽음을 모두 해소한 시점에 배지 unreadCount를 서버 값으로 재동기화한다. */
+function resyncIfPendingSettled(sessionKey: string): void {
+  if (useNotifStore.getState().pendingReadNotifIds.size > 0) return
+  void requestInitialNotifs(sessionKey).catch(() => undefined)
+}
+
 async function performInitialNotifLoad(sessionKey: string, generation: number): Promise<void> {
   if (
     !isCurrentNotifSession(sessionKey, generation) ||
@@ -222,9 +228,11 @@ export function useNotifActions() {
       if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
 
       useNotifStore.getState().confirmNotifRead(notifId)
+      resyncIfPendingSettled(session.sessionKey)
     } catch (error) {
       if (isCurrentNotifSession(session.sessionKey, session.generation)) {
         useNotifStore.getState().rollbackNotifRead(removedNotif)
+        resyncIfPendingSettled(session.sessionKey)
       }
 
       throw error
