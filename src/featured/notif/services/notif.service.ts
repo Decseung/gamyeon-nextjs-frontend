@@ -1,6 +1,7 @@
 import { serverApi } from '@/shared/lib/api'
 import type { ApiResponse } from '@/shared/lib/api'
 import type { GetNotifsParams, NotifListData } from '../types'
+import { isValidNotifListShape, sanitizeNotifs } from '../utils/validateNotif'
 
 const NOTIF_ENDPOINT = '/api/v1/notifs'
 const DEFAULT_NOTIF_LIMIT = 5
@@ -18,15 +19,36 @@ export async function getNotifs(params: GetNotifsParams = {}): Promise<ApiRespon
     },
   })
 
-  if (!response.data || response.data.hasNext !== undefined) {
+  // 실패 응답이거나 data가 없으면 그대로 통과
+  if (!response.success || !response.data) {
     return response
+  }
+
+  // 응답 형식 검증
+  if (!isValidNotifListShape(response.data)) {
+    return {
+      success: false,
+      code: 'INVALID_RESPONSE',
+      message: '알림 목록 응답 형식이 올바르지 않습니다.',
+      data: null,
+    }
+  }
+
+  // 개별 알림 필터링
+  const sanitized = sanitizeNotifs(response.data.notifs)
+
+  // 기존 hasNext 계산 로직: 백엔드 제공 값 우선, 없으면 계산
+  let hasNext = response.data.hasNext
+  if (hasNext === undefined) {
+    hasNext = sanitized.length === limit
   }
 
   return {
     ...response,
     data: {
       ...response.data,
-      hasNext: response.data.notifs.length === limit,
+      notifs: sanitized,
+      hasNext,
     },
   }
 }

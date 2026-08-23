@@ -7,17 +7,9 @@ import {
 } from '@/featured/auth/actions/auth.action'
 import { useAuthStoreHydrated } from '@/featured/auth/hooks/useAuthStoreHydrated'
 import { useAuthStore } from '@/featured/auth/store'
-import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
-import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
-import { useNotifStore } from '@/featured/notif/store'
+import { clearNotifClientSession } from '@/featured/notif/hooks/notifClientSession'
 
 export type OptionalSessionStatus = 'checking' | OptionalSessionResult['status']
-
-function clearNotifSession() {
-  disconnectNotifsImmediately()
-  invalidateNotifSession()
-  useNotifStore.getState().resetNotifs()
-}
 
 export function useOptionalSession(): OptionalSessionStatus {
   const hasHydrated = useAuthStoreHydrated()
@@ -37,11 +29,11 @@ export function useOptionalSession(): OptionalSessionStatus {
         if (result.status === 'authenticated') {
           const currentUserId = useAuthStore.getState().user?.id
           if (currentUserId !== undefined && currentUserId !== result.user.id) {
-            clearNotifSession()
+            clearNotifClientSession()
           }
           restoreSession(result.user)
         } else if (result.status === 'guest') {
-          clearNotifSession()
+          clearNotifClientSession()
           logout()
         }
 
