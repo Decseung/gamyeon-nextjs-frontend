@@ -66,6 +66,20 @@ export const checkIsRecent = (dateString: string): boolean => {
 }
 
 /**
+ * ISO 날짜 문자열을 한국 시간대 기준의 월, 일, 시각 문자열로 변환합니다.
+ * @param dateString ISO 형식의 날짜 문자열
+ */
+export const formatMonthDayTimeKorean = (dateString: string): string => {
+  return new Date(dateString).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+/**
  * 초(seconds)를 "M분 S초" 또는 "M분" 형식으로 변환합니다.
  * @param seconds 초 단위 숫자
  * @returns 예: 850 -> "14분 10초", 60 -> "1분"

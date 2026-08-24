@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clearAuthTokenCookies } from '@/shared/lib/auth/cookies'
 
 function getSafeRedirectPath(request: NextRequest): string {
   const redirectTo = request.nextUrl.searchParams.get('redirectTo') ?? '/signin'
@@ -13,14 +14,12 @@ function getSafeRedirectPath(request: NextRequest): string {
 export async function GET(request: NextRequest) {
   const redirectUrl = new URL(getSafeRedirectPath(request), request.url)
   const response = NextResponse.redirect(redirectUrl)
-  response.cookies.delete('accessToken')
-  response.cookies.delete('refreshToken')
+  clearAuthTokenCookies(response.cookies)
   return response
 }
 
 export async function POST() {
   const response = NextResponse.json({ success: true })
-  response.cookies.delete('accessToken')
-  response.cookies.delete('refreshToken')
+  clearAuthTokenCookies(response.cookies)
   return response
 }

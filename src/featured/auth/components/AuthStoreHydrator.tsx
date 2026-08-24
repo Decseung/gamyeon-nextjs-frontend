@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Loader2 } from 'lucide-react'
 import { verifyCurrentUser } from '@/featured/auth/actions/auth.action'
+import { useAuthStoreHydrated } from '@/featured/auth/hooks/useAuthStoreHydrated'
 import { useAuthStore } from '@/featured/auth/store'
 import { Button } from '@/shared/ui/button'
 
@@ -10,32 +11,10 @@ interface AuthStoreHydratorProps {
   children: ReactNode
 }
 
-function subscribeToHydration(onStoreChange: () => void) {
-  const unsubscribeHydration = useAuthStore.persist.onHydrate(onStoreChange)
-  const unsubscribeFinishHydration = useAuthStore.persist.onFinishHydration(onStoreChange)
-
-  return () => {
-    unsubscribeHydration()
-    unsubscribeFinishHydration()
-  }
-}
-
-function getHydrationSnapshot() {
-  return useAuthStore.persist.hasHydrated()
-}
-
-function getServerHydrationSnapshot() {
-  return false
-}
-
 export function AuthStoreHydrator({ children }: AuthStoreHydratorProps) {
   const isSessionVerified = useAuthStore((state) => state.isSessionVerified)
   const restoreSession = useAuthStore((state) => state.restoreSession)
-  const hasHydrated = useSyncExternalStore(
-    subscribeToHydration,
-    getHydrationSnapshot,
-    getServerHydrationSnapshot,
-  )
+  const hasHydrated = useAuthStoreHydrated()
   const [hasVerificationError, setHasVerificationError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 

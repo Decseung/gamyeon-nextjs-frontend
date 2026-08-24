@@ -16,6 +16,10 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { useAuthStore } from '@/featured/auth/store'
 import { logoutAction } from '@/featured/auth/actions/auth.action'
+import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
+import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
+import { useNotifStore } from '@/featured/notif/store'
+import { NotifButton } from '@/featured/notif/components/NotifButton'
 import Image from 'next/image'
 import { Menu, Play, LayoutDashboard, LogOut, Settings } from 'lucide-react'
 
@@ -25,7 +29,11 @@ const navLinks = [
   { href: '#testimonials', label: '후기' },
 ]
 
-export function Header() {
+interface HeaderProps {
+  isAuthenticated: boolean
+}
+
+export function Header({ isAuthenticated }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { isLoggedIn, user, logout: clearAuthStore } = useAuthStore()
   const router = useRouter()
@@ -47,6 +55,10 @@ export function Header() {
   }
 
   const handleLogout = async () => {
+    disconnectNotifsImmediately()
+    invalidateNotifSession()
+    useNotifStore.getState().resetNotifs()
+
     try {
       await logoutAction()
     } finally {
@@ -93,7 +105,7 @@ export function Header() {
 
         {/* 데스크탑 우측 버튼 영역 */}
         <div className="hidden items-center gap-3 md:flex">
-          {isLoggedIn ? (
+          {isAuthenticated && isLoggedIn ? (
             <>
               <Button variant="default" size="sm" className="gap-1.5" asChild>
                 <Link href="/dashboard">
@@ -101,6 +113,7 @@ export function Header() {
                   면접 시작하기
                 </Link>
               </Button>
+              <NotifButton />
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <button className="ring-primary/40 flex cursor-pointer items-center gap-2 rounded-full transition outline-none hover:ring-2">
@@ -152,73 +165,76 @@ export function Header() {
           )}
         </div>
 
-        {/* 모바일 햄버거 메뉴 */}
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-72">
-            <SheetTitle className="sr-only">모바일 메뉴</SheetTitle>
-            <div className="mt-8 flex flex-col gap-6">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => handleScroll(e, link.href)}
-                  className="text-foreground cursor-pointer text-lg font-medium"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="mt-4 flex flex-col gap-3">
-                {isLoggedIn ? (
-                  <>
-                    <div className="bg-muted/50 flex items-center gap-3 rounded-xl px-3 py-2.5">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{user?.nickname}</p>
-                        <p className="text-muted-foreground text-xs">{user?.email}</p>
+        {/* 모바일 알림 및 햄버거 메뉴 */}
+        <div className="flex items-center md:hidden">
+          {isAuthenticated && isLoggedIn && <NotifButton />}
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72">
+              <SheetTitle className="sr-only">모바일 메뉴</SheetTitle>
+              <div className="mt-8 flex flex-col gap-6">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={(e) => handleScroll(e, link.href)}
+                    className="text-foreground cursor-pointer text-lg font-medium"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <div className="mt-4 flex flex-col gap-3">
+                  {isAuthenticated && isLoggedIn ? (
+                    <>
+                      <div className="bg-muted/50 flex items-center gap-3 rounded-xl px-3 py-2.5">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{user?.nickname}</p>
+                          <p className="text-muted-foreground text-xs">{user?.email}</p>
+                        </div>
                       </div>
-                    </div>
-                    <Button asChild onClick={() => setIsOpen(false)}>
-                      <Link href="/dashboard" className="gap-2">
-                        <Play className="h-4 w-4" />
-                        면접 시작하기
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-destructive gap-2"
-                      onClick={handleLogout}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      로그아웃
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="outline" asChild>
-                      <Link href="/signin" onClick={() => setIsOpen(false)}>
-                        로그인
-                      </Link>
-                    </Button>
-                    <Button asChild>
-                      <Link href="/signup" onClick={() => setIsOpen(false)}>
-                        무료로 시작하기
-                      </Link>
-                    </Button>
-                  </>
-                )}
+                      <Button asChild onClick={() => setIsOpen(false)}>
+                        <Link href="/dashboard" className="gap-2">
+                          <Play className="h-4 w-4" />
+                          면접 시작하기
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-destructive gap-2"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="h-4 w-4" />
+                        로그아웃
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" asChild>
+                        <Link href="/signin" onClick={() => setIsOpen(false)}>
+                          로그인
+                        </Link>
+                      </Button>
+                      <Button asChild>
+                        <Link href="/signup" onClick={() => setIsOpen(false)}>
+                          무료로 시작하기
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </motion.header>
   )
