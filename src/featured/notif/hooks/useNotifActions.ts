@@ -12,6 +12,7 @@ import { useNotifStore } from '../store'
 import type { NotifListData, NotifReadAllSnapshot } from '../types'
 
 const MUTATION_SETTLE_DELAY_MS = 250
+const UNREAD_COUNT_RESYNC_RETRY_DELAY_MS = 1000
 
 interface InitialNotifLoad {
   sessionKey: string
@@ -26,6 +27,7 @@ interface NotifSessionSnapshot {
 
 let initialNotifLoad: InitialNotifLoad | null = null
 let notifSessionGeneration = 0
+let unreadCountResyncRetryTimer: ReturnType<typeof setTimeout> | null = null
 
 class NotifActionError extends Error {
   readonly code: string
@@ -114,10 +116,32 @@ async function waitForNotifMutationsToSettle(
   return false
 }
 
+function clearUnreadCountResyncRetry(): void {
+  if (unreadCountResyncRetryTimer === null) return
+
+  clearTimeout(unreadCountResyncRetryTimer)
+  unreadCountResyncRetryTimer = null
+}
+
 /** pending 읽음을 모두 해소한 시점에 배지 unreadCount를 서버 값으로 재동기화한다. */
-function resyncIfPendingSettled(sessionKey: string): void {
+function resyncIfPendingSettled(session: NotifSessionSnapshot, isRetry = false): void {
+  if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
   if (useNotifStore.getState().pendingReadNotifIds.size > 0) return
-  void requestInitialNotifs(sessionKey).catch(() => undefined)
+
+  void requestInitialNotifs(session.sessionKey)
+    .then(clearUnreadCountResyncRetry)
+    .catch((error: unknown) => {
+      if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
+      console.error('알림 배지 재동기화에 실패했습니다.', error)
+
+      if (isRetry || unreadCountResyncRetryTimer !== null) return
+
+      unreadCountResyncRetryTimer = setTimeout(() => {
+        unreadCountResyncRetryTimer = null
+        resyncIfPendingSettled(session, true)
+      }, UNREAD_COUNT_RESYNC_RETRY_DELAY_MS)
+    })
 }
 
 async function performInitialNotifLoad(sessionKey: string, generation: number): Promise<void> {
@@ -175,6 +199,7 @@ function requestInitialNotifs(sessionKey: string): Promise<void> {
 
 /** 인증 경계가 바뀐 뒤 이전 세션의 비동기 결과가 store에 적용되지 않게 한다. */
 export function invalidateNotifSession(): void {
+  clearUnreadCountResyncRetry()
   notifSessionGeneration += 1
 }
 
@@ -224,19 +249,19 @@ export function useNotifActions() {
     try {
       const response = await markNotifAsReadAction(notifId)
       assertNotifActionSuccess(response, '알림을 읽음 처리하지 못했습니다.')
-
-      if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
-
-      useNotifStore.getState().confirmNotifRead(notifId)
-      resyncIfPendingSettled(session.sessionKey)
     } catch (error) {
       if (isCurrentNotifSession(session.sessionKey, session.generation)) {
         useNotifStore.getState().rollbackNotifRead(removedNotif)
-        resyncIfPendingSettled(session.sessionKey)
+        resyncIfPendingSettled(session)
       }
 
       throw error
     }
+
+    if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
+
+    useNotifStore.getState().confirmNotifRead(notifId)
+    resyncIfPendingSettled(session)
   }, [])
 
   const markProcessingAsRead = useCallback(async (notifId: number) => {
