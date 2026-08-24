@@ -1,4 +1,4 @@
-import type { Notif } from '../types'
+import type { Notif, NotifListData } from '../types'
 
 function isNotifType(value: unknown): value is Notif['notifType'] {
   return (
@@ -13,6 +13,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+/** UI 표시 여부와 무관하게 페이지네이션 커서로 사용할 수 있는 ID를 추출한다. */
+export function getNotifCursorId(value: unknown): number | null {
+  if (!isRecord(value)) return null
+
+  const { notifId } = value
+  return typeof notifId === 'number' && Number.isSafeInteger(notifId) && notifId > 0
+    ? notifId
+    : null
+}
+
 /**
  * 알림 데이터의 구조와 타입을 검증한다.
  * notifId와 targetId는 0보다 큰 안전정수여야 하고, createdAt은 ISO 8601 형식 문자열이어야 한다.
@@ -21,9 +31,7 @@ export function isNotif(value: unknown): value is Notif {
   if (!isRecord(value)) return false
 
   return (
-    typeof value.notifId === 'number' &&
-    Number.isSafeInteger(value.notifId) &&
-    value.notifId > 0 &&
+    getNotifCursorId(value) !== null &&
     isNotifType(value.notifType) &&
     typeof value.title === 'string' &&
     typeof value.content === 'string' &&
@@ -66,4 +74,22 @@ export function isValidNotifListShape(
     Array.isArray(notifs) &&
     (hasNext === undefined || typeof hasNext === 'boolean')
   )
+}
+
+/** 서버 원본 페이지와 UI에 전달할 알림을 분리해 정규화한다. */
+export function normalizeNotifListData(value: unknown, limit: number): NotifListData | null {
+  if (!isValidNotifListShape(value)) return null
+
+  const rawNotifs = value.notifs
+  const hasNext = value.hasNext ?? rawNotifs.length === limit
+  const nextCursorId = getNotifCursorId(rawNotifs.at(-1))
+
+  if (hasNext && nextCursorId === null) return null
+
+  return {
+    unreadCount: value.unreadCount,
+    notifs: sanitizeNotifs(rawNotifs),
+    hasNext,
+    nextCursorId,
+  }
 }

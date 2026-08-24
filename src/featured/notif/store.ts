@@ -35,7 +35,6 @@ function getUnreadPage(
 ): {
   unreadNotifs: Notif[]
   readNotifIds: Set<number>
-  nextCursorId: number | null
 } {
   const unreadNotifs: Notif[] = []
   const readNotifIds = new Set<number>()
@@ -52,7 +51,6 @@ function getUnreadPage(
   return {
     unreadNotifs,
     readNotifIds,
-    nextCursorId: data.notifs.at(-1)?.notifId ?? null,
   }
 }
 
@@ -84,10 +82,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
 
   applyInitialNotifs: (data: NotifListData) => {
     set((state) => {
-      const { unreadNotifs, readNotifIds, nextCursorId } = getUnreadPage(
-        data,
-        state.pendingReadNotifIds,
-      )
+      const { unreadNotifs, readNotifIds } = getUnreadPage(data, state.pendingReadNotifIds)
       const currentUnreadNotifs = state.notifs.filter(
         (notif) =>
           shouldKeepNotif(notif) &&
@@ -102,8 +97,8 @@ export const useNotifStore = create<NotifState>((set, get) => ({
           state.unreadCount,
           state.pendingReadNotifIds,
         ),
-        nextCursorId,
-        hasMore: data.hasNext ?? false,
+        nextCursorId: data.nextCursorId,
+        hasMore: data.hasNext,
       }
     })
   },
@@ -121,10 +116,7 @@ export const useNotifStore = create<NotifState>((set, get) => ({
 
   appendNotifs: (data: NotifListData) => {
     set((state) => {
-      const { unreadNotifs, readNotifIds, nextCursorId } = getUnreadPage(
-        data,
-        state.pendingReadNotifIds,
-      )
+      const { unreadNotifs, readNotifIds } = getUnreadPage(data, state.pendingReadNotifIds)
       const currentUnreadNotifs = state.notifs.filter(
         (notif) =>
           shouldKeepNotif(notif) &&
@@ -141,8 +133,8 @@ export const useNotifStore = create<NotifState>((set, get) => ({
           state.unreadCount,
           state.pendingReadNotifIds,
         ),
-        nextCursorId: nextCursorId ?? state.nextCursorId,
-        hasMore: data.hasNext ?? false,
+        nextCursorId: data.nextCursorId,
+        hasMore: data.hasNext,
       }
     })
   },

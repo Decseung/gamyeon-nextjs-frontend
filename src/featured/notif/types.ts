@@ -21,7 +21,8 @@ export interface NotifListData {
   unreadCount: number
   notifs: Notif[]
   /** 백엔드가 hasNext 제공하면 다음 커서 페이지 존재 여부를 우선 사용한다. */
-  hasNext?: boolean
+  hasNext: boolean
+  nextCursorId: number | null
 }
 
 /** 알림 목록의 커서 기반 조회 파라미터 */
