@@ -1,6 +1,7 @@
 import { serverApi } from '@/shared/lib/api'
 import type { ApiResponse } from '@/shared/lib/api'
 import type { GetNotifsParams, NotifListData } from '../types'
+import { normalizeNotifListData } from '../utils/validateNotif'
 
 const NOTIF_ENDPOINT = '/api/v1/notifs'
 const DEFAULT_NOTIF_LIMIT = 5
@@ -11,23 +12,35 @@ const DEFAULT_NOTIF_LIMIT = 5
  */
 export async function getNotifs(params: GetNotifsParams = {}): Promise<ApiResponse<NotifListData>> {
   const limit = params.size ?? DEFAULT_NOTIF_LIMIT
-  const response = await serverApi.get<NotifListData>(NOTIF_ENDPOINT, {
+  const response = await serverApi.get<unknown>(NOTIF_ENDPOINT, {
     params: {
       size: limit,
       ...(params.cursorId !== undefined && { cursorId: params.cursorId }),
     },
   })
 
-  if (!response.data || response.data.hasNext !== undefined) {
-    return response
+  // 실패 응답이거나 data가 없으면 그대로 통과
+  if (!response.success || !response.data) {
+    return {
+      ...response,
+      data: null,
+    }
+  }
+
+  const data = normalizeNotifListData(response.data, limit)
+
+  if (!data) {
+    return {
+      success: false,
+      code: 'INVALID_RESPONSE',
+      message: '알림 목록 응답 형식이 올바르지 않습니다.',
+      data: null,
+    }
   }
 
   return {
     ...response,
-    data: {
-      ...response.data,
-      hasNext: response.data.notifs.length === limit,
-    },
+    data,
   }
 }
 

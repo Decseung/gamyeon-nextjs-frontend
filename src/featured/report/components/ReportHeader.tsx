@@ -14,9 +14,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { logoutAction } from '@/featured/auth/actions/auth.action'
 import { useAuthStore } from '@/featured/auth/store'
-import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
-import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
-import { useNotifStore } from '@/featured/notif/store'
+import { clearNotifClientSession } from '@/featured/notif/hooks/notifClientSession'
 
 export function ReportHeader() {
   const { user, logout: clearAuthStore } = useAuthStore()
@@ -24,9 +22,7 @@ export function ReportHeader() {
   const initials = user?.nickname ? user.nickname.slice(0, 1) : 'U'
 
   const handleLogout = async () => {
-    disconnectNotifsImmediately()
-    invalidateNotifSession()
-    useNotifStore.getState().resetNotifs()
+    clearNotifClientSession()
 
     try {
       await logoutAction()

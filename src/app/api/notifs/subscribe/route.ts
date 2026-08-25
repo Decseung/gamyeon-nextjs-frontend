@@ -13,11 +13,12 @@ const NO_STORE_HEADERS = {
   Vary: 'Cookie',
 } as const
 
+const USE_DIRECT_NOTIF_SSE = Boolean(process.env.NEXT_PUBLIC_NOTIF_SSE_TRANSPORT?.trim())
+
 type RefreshedTokens = Extract<Awaited<ReturnType<typeof reissue>>, { ok: true }>
 
 type RefreshResult =
-  | { ok: true; tokens: RefreshedTokens }
-  | { ok: false; reason: 'invalid' | 'network' }
+  { ok: true; tokens: RefreshedTokens } | { ok: false; reason: 'invalid' | 'network' }
 
 function getSubscribeUrl(): URL | null {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '')
@@ -161,6 +162,10 @@ function withDevelopmentLogging(body: ReadableStream<Uint8Array>): ReadableStrea
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  if (USE_DIRECT_NOTIF_SSE) {
+    return errorResponse(404, 'NOTIF_SSE_ROUTE_DISABLED')
+  }
+
   const subscribeUrl = getSubscribeUrl()
   if (!subscribeUrl) {
     return errorResponse(503, 'NOTIF_SSE_UNAVAILABLE')

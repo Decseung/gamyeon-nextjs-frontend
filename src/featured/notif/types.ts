@@ -21,7 +21,8 @@ export interface NotifListData {
   unreadCount: number
   notifs: Notif[]
   /** 백엔드가 hasNext 제공하면 다음 커서 페이지 존재 여부를 우선 사용한다. */
-  hasNext?: boolean
+  hasNext: boolean
+  nextCursorId: number | null
 }
 
 /** 알림 목록의 커서 기반 조회 파라미터 */
@@ -33,8 +34,9 @@ export interface GetNotifsParams {
 }
 
 export interface NotifReadAllSnapshot {
-  notifIds: number[]
+  unreadNotifIds: number[]
   pendingReadNotifIds: number[]
+  unsyncedSuppressedNotifIds: number[]
   unreadCount: number
 }
 
@@ -46,19 +48,25 @@ export interface NotifState {
   hasMore: boolean
   isLoading: boolean
   isLoadingMore: boolean
+  isMarkingAllAsRead: boolean
   mutationRevision: number
   pendingReadNotifIds: ReadonlySet<number>
+  suppressedProcessingNotifIds: ReadonlySet<number>
+  unsyncedSuppressedNotifIds: ReadonlySet<number>
   beginInitialLoad: () => boolean
   finishInitialLoad: () => void
-  applyInitialNotifs: (data: NotifListData) => void
+  applyInitialNotifs: (data: NotifListData) => number[]
   beginMoreLoad: () => number | null
   finishMoreLoad: () => void
-  appendNotifs: (data: NotifListData) => void
-  prependNotif: (notif: Notif) => void
+  appendNotifs: (data: NotifListData) => number[]
+  prependNotif: (notif: Notif) => number[]
   beginNotifRead: (notifId: number) => Notif | null
   confirmNotifRead: (notifId: number) => void
   rollbackNotifRead: (notif: Notif) => void
   markNotifAsReadInPlace: (notifId: number) => void
-  removeNotifsAsRead: (snapshot: NotifReadAllSnapshot) => void
+  confirmSuppressedNotifRead: (notifId: number) => void
+  beginAllNotifsRead: () => NotifReadAllSnapshot | null
+  confirmAllNotifsRead: (snapshot: NotifReadAllSnapshot) => void
+  rollbackAllNotifsRead: (snapshot: NotifReadAllSnapshot) => void
   resetNotifs: () => void
 }
