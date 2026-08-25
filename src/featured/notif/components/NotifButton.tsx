@@ -85,8 +85,11 @@ export function NotifButton() {
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-88 p-0">
-        <div className="border-border/50 flex items-center justify-between border-b px-4 py-3">
+      <DropdownMenuContent
+        align="end"
+        className="flex w-[calc(100vw-2rem)] max-w-88 flex-col overflow-hidden p-0"
+      >
+        <div className="border-border/50 flex shrink-0 items-center justify-between border-b px-4 py-3">
           <span className="text-sm font-semibold">알림</span>
           {unreadCount > 0 && (
             <button
