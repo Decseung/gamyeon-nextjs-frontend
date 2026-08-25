@@ -241,7 +241,7 @@ export function useNotifActions() {
 
     const targetNotif = useNotifStore.getState().notifs.find((notif) => notif.notifId === notifId)
 
-    if (!targetNotif) return
+    if (!targetNotif || targetNotif.isRead) return
 
     const removedNotif = useNotifStore.getState().beginNotifRead(notifId)
     if (!removedNotif) return
@@ -286,7 +286,7 @@ export function useNotifActions() {
 
     const notifState = useNotifStore.getState()
     const snapshot: NotifReadAllSnapshot = {
-      notifIds: notifState.notifs.map((notif) => notif.notifId),
+      notifIds: notifState.notifs.filter((notif) => !notif.isRead).map((notif) => notif.notifId),
       pendingReadNotifIds: Array.from(notifState.pendingReadNotifIds),
       unreadCount: notifState.unreadCount,
     }
