@@ -10,7 +10,13 @@ import { isNotif } from '../utils/validateNotif'
 import { clearNotifClientSession, registerNotifDisconnectHandler } from './notifClientSession'
 import { useNotifActions } from './useNotifActions'
 
+const USE_DIRECT_NOTIF_SSE = Boolean(process.env.NEXT_PUBLIC_NOTIF_SSE_TRANSPORT?.trim())
+
 function getNotifSubscribeEndpoint(): string {
+  if (!USE_DIRECT_NOTIF_SSE) {
+    return '/api/notifs/subscribe'
+  }
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '')
   if (!apiUrl) {
     throw new Error('NEXT_PUBLIC_API_URL이 설정되지 않았습니다.')
