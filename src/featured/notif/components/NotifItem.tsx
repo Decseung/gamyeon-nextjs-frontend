@@ -12,6 +12,7 @@ interface NotifItemProps {
 export function NotifItem({ notif, onClick }: NotifItemProps) {
   const { icon: Icon, color } = NOTIF_STYLE_CONFIG[notif.notifType]
   const isNavigable = notif.notifType !== 'REPORT_PROCESSING'
+  const title = notif.notifType === 'REPORT_PROCESSING' ? '면접 분석중' : notif.title
 
   return (
     <li className="border-border/40 h-24 border-b last:border-b-0">
@@ -32,8 +33,8 @@ export function NotifItem({ notif, onClick }: NotifItemProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <p className="truncate text-sm font-medium" title={notif.title}>
-              {notif.title}
+            <p className="truncate text-sm font-medium" title={title}>
+              {title}
             </p>
             {!notif.isRead && <span className="bg-primary h-1.5 w-1.5 shrink-0 rounded-full" />}
           </div>

@@ -5,7 +5,6 @@ import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event
 import { refreshAuthSession } from '@/featured/auth/actions/auth.action'
 import { useAuthStore } from '@/featured/auth/store'
 import type { Notif } from '../types'
-import { useNotifStore } from '../store'
 import { isNotif } from '../utils/validateNotif'
 import { clearNotifClientSession, registerNotifDisconnectHandler } from './notifClientSession'
 import { useNotifActions } from './useNotifActions'
@@ -282,7 +281,7 @@ export function useNotifSubscription({
 }: UseNotifSubscriptionOptions = {}): void {
   const userId = useAuthStore((state) => state.user?.id)
   const logout = useAuthStore((state) => state.logout)
-  const { fetchInitialNotifs } = useNotifActions()
+  const { fetchInitialNotifs, receiveNotif } = useNotifActions()
   const previousSessionKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -316,7 +315,7 @@ export function useNotifSubscription({
       },
       onNotif: (notif) => {
         if (isActive) {
-          useNotifStore.getState().prependNotif(notif)
+          receiveNotif(notif)
         }
       },
       onAuthRequired: async () => {
@@ -339,5 +338,5 @@ export function useNotifSubscription({
       isActive = false
       cleanupSubscription()
     }
-  }, [fetchInitialNotifs, logout, unauthorizedBehavior, userId])
+  }, [fetchInitialNotifs, logout, receiveNotif, unauthorizedBehavior, userId])
 }
