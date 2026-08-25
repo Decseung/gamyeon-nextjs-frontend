@@ -6,6 +6,7 @@ interface NotifListProps {
   hasMore: boolean
   isLoading: boolean
   isLoadingMore: boolean
+  isMarkingAllAsRead: boolean
   onNotifClick: (notif: Notif) => void
   onLoadMore: () => void
 }
@@ -15,6 +16,7 @@ export function NotifList({
   hasMore,
   isLoading,
   isLoadingMore,
+  isMarkingAllAsRead,
   onNotifClick,
   onLoadMore,
 }: NotifListProps) {
@@ -38,7 +40,7 @@ export function NotifList({
           <button
             type="button"
             onClick={onLoadMore}
-            disabled={isLoadingMore}
+            disabled={isLoadingMore || isMarkingAllAsRead}
             className="text-muted-foreground hover:bg-muted hover:text-foreground w-full rounded-md px-3 py-2 text-xs transition disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoadingMore ? '불러오는 중...' : '더 보기'}

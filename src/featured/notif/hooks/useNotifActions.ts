@@ -9,7 +9,7 @@ import {
   markNotifAsReadAction,
 } from '../actions/notif.action'
 import { useNotifStore } from '../store'
-import type { NotifListData, NotifReadAllSnapshot } from '../types'
+import type { NotifListData } from '../types'
 
 const MUTATION_SETTLE_DELAY_MS = 250
 const UNREAD_COUNT_RESYNC_RETRY_DELAY_MS = 1000
@@ -126,7 +126,8 @@ function clearUnreadCountResyncRetry(): void {
 /** pending 읽음을 모두 해소한 시점에 배지 unreadCount를 서버 값으로 재동기화한다. */
 function resyncIfPendingSettled(session: NotifSessionSnapshot, isRetry = false): void {
   if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
-  if (useNotifStore.getState().pendingReadNotifIds.size > 0) return
+  const notifState = useNotifStore.getState()
+  if (notifState.pendingReadNotifIds.size > 0 || notifState.isMarkingAllAsRead) return
 
   void requestInitialNotifs(session.sessionKey)
     .then(clearUnreadCountResyncRetry)
@@ -284,19 +285,25 @@ export function useNotifActions() {
     const session = getCurrentNotifSession()
     if (!session) return
 
-    const notifState = useNotifStore.getState()
-    const snapshot: NotifReadAllSnapshot = {
-      notifIds: notifState.notifs.filter((notif) => !notif.isRead).map((notif) => notif.notifId),
-      pendingReadNotifIds: Array.from(notifState.pendingReadNotifIds),
-      unreadCount: notifState.unreadCount,
-    }
+    const snapshot = useNotifStore.getState().beginAllNotifsRead()
+    if (!snapshot) return
 
-    const response = await markAllNotifsAsReadAction()
-    assertNotifActionSuccess(response, '알림을 모두 읽음 처리하지 못했습니다.')
+    try {
+      const response = await markAllNotifsAsReadAction()
+      assertNotifActionSuccess(response, '알림을 모두 읽음 처리하지 못했습니다.')
+    } catch (error) {
+      if (isCurrentNotifSession(session.sessionKey, session.generation)) {
+        useNotifStore.getState().rollbackAllNotifsRead(snapshot)
+        resyncIfPendingSettled(session)
+      }
+
+      throw error
+    }
 
     if (!isCurrentNotifSession(session.sessionKey, session.generation)) return
 
-    useNotifStore.getState().removeNotifsAsRead(snapshot)
+    useNotifStore.getState().confirmAllNotifsRead(snapshot)
+    resyncIfPendingSettled(session)
   }, [])
 
   return useMemo(

@@ -17,6 +17,7 @@ export function NotifButton() {
   const hasMore = useNotifStore((state) => state.hasMore)
   const isLoading = useNotifStore((state) => state.isLoading)
   const isLoadingMore = useNotifStore((state) => state.isLoadingMore)
+  const isMarkingAllAsRead = useNotifStore((state) => state.isMarkingAllAsRead)
   const { fetchMoreNotifs, markAsRead, markProcessingAsRead, markAllAsRead } = useNotifActions()
   const badgeClassName =
     unreadCount > 99
@@ -26,6 +27,8 @@ export function NotifButton() {
         : 'top-0.5 right-0.5 h-4 w-4 text-[10px]'
 
   const handleMarkAllAsRead = () => {
+    if (isMarkingAllAsRead) return
+
     void markAllAsRead().catch((error: unknown) => {
       console.error('알림을 모두 읽음 처리하지 못했습니다.', error)
     })
@@ -91,13 +94,14 @@ export function NotifButton() {
       >
         <div className="border-border/50 flex shrink-0 items-center justify-between border-b px-4 py-3">
           <span className="text-sm font-semibold">알림</span>
-          {unreadCount > 0 && (
+          {(unreadCount > 0 || isMarkingAllAsRead) && (
             <button
               type="button"
               onClick={handleMarkAllAsRead}
-              className="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition"
+              disabled={isMarkingAllAsRead}
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition disabled:cursor-not-allowed disabled:opacity-60"
             >
-              모두 읽음
+              {isMarkingAllAsRead ? '처리 중...' : '모두 읽음'}
             </button>
           )}
         </div>
@@ -106,6 +110,7 @@ export function NotifButton() {
           hasMore={hasMore}
           isLoading={isLoading}
           isLoadingMore={isLoadingMore}
+          isMarkingAllAsRead={isMarkingAllAsRead}
           onNotifClick={handleNotifClick}
           onLoadMore={handleLoadMore}
         />

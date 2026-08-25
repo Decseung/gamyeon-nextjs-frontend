@@ -34,7 +34,7 @@ export interface GetNotifsParams {
 }
 
 export interface NotifReadAllSnapshot {
-  notifIds: number[]
+  unreadNotifIds: number[]
   pendingReadNotifIds: number[]
   unreadCount: number
 }
@@ -47,6 +47,7 @@ export interface NotifState {
   hasMore: boolean
   isLoading: boolean
   isLoadingMore: boolean
+  isMarkingAllAsRead: boolean
   mutationRevision: number
   pendingReadNotifIds: ReadonlySet<number>
   beginInitialLoad: () => boolean
@@ -60,6 +61,8 @@ export interface NotifState {
   confirmNotifRead: (notifId: number) => void
   rollbackNotifRead: (notif: Notif) => void
   markNotifAsReadInPlace: (notifId: number) => void
-  removeNotifsAsRead: (snapshot: NotifReadAllSnapshot) => void
+  beginAllNotifsRead: () => NotifReadAllSnapshot | null
+  confirmAllNotifsRead: (snapshot: NotifReadAllSnapshot) => void
+  rollbackAllNotifsRead: (snapshot: NotifReadAllSnapshot) => void
   resetNotifs: () => void
 }
