@@ -7,9 +7,7 @@ import type { OAuthLoginData, RestoreAccountData, RestoreUser } from '@/featured
 import type { ApiResponse } from '@/shared/lib/api/types'
 import type { OAuthProvider } from '@/shared/ui/provider-icon'
 import { generateCodeChallenge, generateCodeVerifier } from '@/shared/lib/utils/pkce'
-import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
-import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
-import { useNotifStore } from '@/featured/notif/store'
+import { clearNotifClientSession } from '@/featured/notif/hooks/notifClientSession'
 
 const PKCE_VERIFIER_KEY = 'pkce_code_verifier'
 
@@ -30,9 +28,7 @@ export function useSigninFlow() {
   const calledRef = useRef(false)
 
   useEffect(() => {
-    disconnectNotifsImmediately()
-    invalidateNotifSession()
-    useNotifStore.getState().resetNotifs()
+    clearNotifClientSession()
 
     // proxy가 쿠키 만료/거부로 이 페이지에 강제 리다이렉트한 경우, sessionStorage에
     // 남아있는 로그인 상태(user/isLoggedIn)가 실제 쿠키 상태와 어긋날 수 있다.

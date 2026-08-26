@@ -16,9 +16,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { useAuthStore } from '@/featured/auth/store'
 import { logoutAction } from '@/featured/auth/actions/auth.action'
-import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
-import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
-import { useNotifStore } from '@/featured/notif/store'
+import { clearNotifClientSession } from '@/featured/notif/hooks/notifClientSession'
 import { NotifButton } from '@/featured/notif/components/NotifButton'
 import Image from 'next/image'
 import { Menu, Play, LayoutDashboard, LogOut, Settings } from 'lucide-react'
@@ -55,9 +53,7 @@ export function Header({ isAuthenticated }: HeaderProps) {
   }
 
   const handleLogout = async () => {
-    disconnectNotifsImmediately()
-    invalidateNotifSession()
-    useNotifStore.getState().resetNotifs()
+    clearNotifClientSession()
 
     try {
       await logoutAction()

@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/shared/ui/card'
 import { ChevronRight, Megaphone } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { getNoticesAction } from '@/featured/notice/actions/notice.action'
 import type { Notice } from '@/featured/notice/types'
 import { NOTICE_CATEGORY } from '@/featured/notice/constants'
 import { formatDateDot, checkIsRecent } from '@/shared/lib/utils/date'
@@ -21,40 +19,16 @@ const fadeUp = {
 
 type NoticeWithUI = Notice & { isRecent: boolean }
 
-export function NoticeSection() {
-  const [notices, setNotices] = useState<NoticeWithUI[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+interface NoticeSectionProps {
+  initialNotices: Notice[]
+}
 
-  useEffect(() => {
-    async function fetchNotices() {
-      setIsLoading(true)
-
-      try {
-        const result = await getNoticesAction()
-
-        if (result.success && result.data) {
-          const processedNotices = result.data.slice(0, 4).map((item) => ({
-            ...item,
-            isRecent: checkIsRecent(item.createdAt),
-          }))
-
-          setNotices(processedNotices)
-        } else {
-          console.error('공지사항 불러오기 실패:', result.message)
-          setNotices([])
-        }
-      } catch (error) {
-        console.error('공지사항 통신 에러 발생:', error)
-        setNotices([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchNotices()
-  }, [])
-
-  const isEmpty = notices.length === 0 && !isLoading
+export function NoticeSection({ initialNotices }: NoticeSectionProps) {
+  const notices: NoticeWithUI[] = initialNotices.map((item) => ({
+    ...item,
+    isRecent: checkIsRecent(item.createdAt),
+  }))
+  const isEmpty = notices.length === 0
 
   return (
     <motion.div
@@ -79,14 +53,12 @@ export function NoticeSection() {
       <Card className="border-border/50 flex h-67 flex-col overflow-hidden">
         <CardContent
           className={
-            isEmpty || isLoading
+            isEmpty
               ? 'flex flex-1 flex-col items-center justify-center p-5'
               : 'flex flex-1 flex-col p-0 py-6'
           }
         >
-          {isLoading ? (
-            <div className="text-muted-foreground text-sm">공지사항을 불러오는 중입니다...</div>
-          ) : isEmpty ? (
+          {isEmpty ? (
             <div className="flex flex-col items-center justify-center space-y-3">
               <div className="bg-muted/30 flex h-12 w-12 items-center justify-center rounded-full">
                 <Megaphone className="text-muted-foreground h-6 w-6" />

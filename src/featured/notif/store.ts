@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Notif, NotifListData, NotifState } from './types'
+import type { Notif, NotifListData, NotifReadAllSnapshot, NotifState } from './types'
 
 const initialNotifState = {
   notifs: [] as Notif[],
@@ -8,8 +8,18 @@ const initialNotifState = {
   hasMore: false,
   isLoading: false,
   isLoadingMore: false,
+  isMarkingAllAsRead: false,
   mutationRevision: 0,
   pendingReadNotifIds: new Set<number>() as ReadonlySet<number>,
+  suppressedProcessingNotifIds: new Set<number>() as ReadonlySet<number>,
+  unsyncedSuppressedNotifIds: new Set<number>() as ReadonlySet<number>,
+}
+
+interface ReconciledNotifs {
+  notifs: Notif[]
+  suppressedProcessingNotifIds: ReadonlySet<number>
+  unsyncedSuppressedNotifIds: ReadonlySet<number>
+  newlyUnsyncedNotifIds: number[]
 }
 
 function mergeNotifsByCreatedAt(apiNotifs: Notif[], currentNotifs: Notif[]): Notif[] {
@@ -25,50 +35,91 @@ function mergeNotifsByCreatedAt(apiNotifs: Notif[], currentNotifs: Notif[]): Not
   })
 }
 
-function shouldKeepNotif(notif: Notif): boolean {
-  return !notif.isRead || notif.notifType === 'REPORT_PROCESSING'
-}
+function reconcileReportNotifs(
+  notifs: Notif[],
+  currentSuppressedProcessingNotifIds: ReadonlySet<number>,
+  currentUnsyncedSuppressedNotifIds: ReadonlySet<number>,
+): ReconciledNotifs {
+  const terminalTargetIds = new Set<number>()
 
-function getUnreadPage(
-  data: NotifListData,
-  pendingReadNotifIds: ReadonlySet<number>,
-): {
-  unreadNotifs: Notif[]
-  readNotifIds: Set<number>
-  nextCursorId: number | null
-} {
-  const unreadNotifs: Notif[] = []
-  const readNotifIds = new Set<number>()
+  for (const notif of notifs) {
+    if (notif.notifType === 'REPORT_SUCCESS' || notif.notifType === 'REPORT_FAILED') {
+      terminalTargetIds.add(notif.targetId)
+    }
+  }
 
-  for (const notif of data.notifs) {
+  if (terminalTargetIds.size === 0) {
+    return {
+      notifs,
+      suppressedProcessingNotifIds: currentSuppressedProcessingNotifIds,
+      unsyncedSuppressedNotifIds: currentUnsyncedSuppressedNotifIds,
+      newlyUnsyncedNotifIds: [],
+    }
+  }
+
+  const suppressedProcessingNotifIds = new Set(currentSuppressedProcessingNotifIds)
+  const unsyncedSuppressedNotifIds = new Set(currentUnsyncedSuppressedNotifIds)
+  const newlyUnsyncedNotifIds: number[] = []
+  const reconciledNotifs: Notif[] = []
+
+  for (const notif of notifs) {
+    const isSupersededProcessingNotif =
+      notif.notifType === 'REPORT_PROCESSING' && terminalTargetIds.has(notif.targetId)
+
+    if (!isSupersededProcessingNotif) {
+      reconciledNotifs.push(notif)
+      continue
+    }
+
+    suppressedProcessingNotifIds.add(notif.notifId)
+
     if (notif.isRead) {
-      readNotifIds.add(notif.notifId)
-      if (notif.notifType === 'REPORT_PROCESSING') unreadNotifs.push(notif)
-    } else if (!pendingReadNotifIds.has(notif.notifId)) {
-      unreadNotifs.push(notif)
+      unsyncedSuppressedNotifIds.delete(notif.notifId)
+      continue
+    }
+
+    if (!unsyncedSuppressedNotifIds.has(notif.notifId)) {
+      unsyncedSuppressedNotifIds.add(notif.notifId)
+      newlyUnsyncedNotifIds.push(notif.notifId)
     }
   }
 
   return {
-    unreadNotifs,
-    readNotifIds,
-    nextCursorId: data.notifs.at(-1)?.notifId ?? null,
+    notifs: reconciledNotifs,
+    suppressedProcessingNotifIds,
+    unsyncedSuppressedNotifIds,
+    newlyUnsyncedNotifIds,
   }
 }
 
-function getAdjustedUnreadCount(
+function excludePendingReadNotifs(
+  notifs: Notif[],
+  pendingReadNotifIds: ReadonlySet<number>,
+): Notif[] {
+  return notifs.filter((notif) => !pendingReadNotifIds.has(notif.notifId))
+}
+
+function getReconciledUnreadCount(
   serverUnreadCount: number,
   currentUnreadCount: number,
   pendingReadNotifIds: ReadonlySet<number>,
+  isMarkingAllAsRead: boolean,
+  unsyncedSuppressedCount: number,
+  newlyUnsyncedCount: number,
 ): number {
   // 서버 전역 카운트가 pending 읽음을 이미 반영했는지는 현재 페이지 응답만으로 알 수 없다.
   // 낙관적 읽음이 끝날 때까지는 로컬 카운트를 유지해 이중 차감을 피한다.
-  return pendingReadNotifIds.size > 0 ? currentUnreadCount : serverUnreadCount
+  if (pendingReadNotifIds.size > 0 || isMarkingAllAsRead) {
+    return Math.max(0, currentUnreadCount - newlyUnsyncedCount)
+  }
+
+  return Math.max(0, serverUnreadCount - unsyncedSuppressedCount)
 }
 
 /**
  * 알림 드롭다운과 SSE 수신 결과가 함께 사용하는 전역 상태.
- * 목록은 최신순으로 유지하며, 다음 페이지는 마지막 notifId를 cursorId로 요청한다.
+ * 읽음 여부와 관계없이 불러온 목록을 최신순으로 유지하며,
+ * 다음 페이지는 마지막 notifId를 cursorId로 요청한다.
  */
 export const useNotifStore = create<NotifState>((set, get) => ({
   ...initialNotifState,
@@ -83,35 +134,51 @@ export const useNotifStore = create<NotifState>((set, get) => ({
   finishInitialLoad: () => set({ isLoading: false }),
 
   applyInitialNotifs: (data: NotifListData) => {
+    let newlyUnsyncedNotifIds: number[] = []
+
     set((state) => {
-      const { unreadNotifs, readNotifIds, nextCursorId } = getUnreadPage(
-        data,
-        state.pendingReadNotifIds,
+      // An initial response started before the all-read transaction may still contain
+      // unread notifications. Defer the entire response until the post-mutation resync.
+      if (state.isMarkingAllAsRead) return {}
+
+      const settledApiNotifs = excludePendingReadNotifs(data.notifs, state.pendingReadNotifIds)
+      const reconciled = reconcileReportNotifs(
+        mergeNotifsByCreatedAt(settledApiNotifs, state.notifs),
+        state.suppressedProcessingNotifIds,
+        state.unsyncedSuppressedNotifIds,
       )
-      const currentUnreadNotifs = state.notifs.filter(
-        (notif) =>
-          shouldKeepNotif(notif) &&
-          (!readNotifIds.has(notif.notifId) || notif.notifType === 'REPORT_PROCESSING') &&
-          !state.pendingReadNotifIds.has(notif.notifId),
+      newlyUnsyncedNotifIds = reconciled.newlyUnsyncedNotifIds
+      const unreadCount = getReconciledUnreadCount(
+        data.unreadCount,
+        state.unreadCount,
+        state.pendingReadNotifIds,
+        state.isMarkingAllAsRead,
+        reconciled.unsyncedSuppressedNotifIds.size,
+        newlyUnsyncedNotifIds.length,
       )
 
       return {
-        notifs: mergeNotifsByCreatedAt(unreadNotifs, currentUnreadNotifs),
-        unreadCount: getAdjustedUnreadCount(
-          data.unreadCount,
-          state.unreadCount,
-          state.pendingReadNotifIds,
-        ),
-        nextCursorId,
-        hasMore: data.hasNext ?? false,
+        notifs: reconciled.notifs,
+        unreadCount,
+        nextCursorId: data.nextCursorId,
+        hasMore: data.hasNext,
+        suppressedProcessingNotifIds: reconciled.suppressedProcessingNotifIds,
+        unsyncedSuppressedNotifIds: reconciled.unsyncedSuppressedNotifIds,
+        ...(newlyUnsyncedNotifIds.length > 0 && {
+          mutationRevision: state.mutationRevision + 1,
+        }),
       }
     })
+
+    return newlyUnsyncedNotifIds
   },
 
   beginMoreLoad: () => {
-    const { hasMore, isLoading, isLoadingMore, nextCursorId } = get()
+    const { hasMore, isLoading, isLoadingMore, isMarkingAllAsRead, nextCursorId } = get()
 
-    if (!hasMore || isLoading || isLoadingMore || nextCursorId === null) return null
+    if (!hasMore || isLoading || isLoadingMore || isMarkingAllAsRead || nextCursorId === null) {
+      return null
+    }
 
     set({ isLoadingMore: true })
     return nextCursorId
@@ -120,50 +187,76 @@ export const useNotifStore = create<NotifState>((set, get) => ({
   finishMoreLoad: () => set({ isLoadingMore: false }),
 
   appendNotifs: (data: NotifListData) => {
+    let newlyUnsyncedNotifIds: number[] = []
+
     set((state) => {
-      const { unreadNotifs, readNotifIds, nextCursorId } = getUnreadPage(
-        data,
+      if (state.isMarkingAllAsRead) return {}
+
+      const settledApiNotifs = excludePendingReadNotifs(data.notifs, state.pendingReadNotifIds)
+      const reconciled = reconcileReportNotifs(
+        mergeNotifsByCreatedAt(settledApiNotifs, state.notifs),
+        state.suppressedProcessingNotifIds,
+        state.unsyncedSuppressedNotifIds,
+      )
+      newlyUnsyncedNotifIds = reconciled.newlyUnsyncedNotifIds
+      const unreadCount = getReconciledUnreadCount(
+        data.unreadCount,
+        state.unreadCount,
         state.pendingReadNotifIds,
+        state.isMarkingAllAsRead,
+        reconciled.unsyncedSuppressedNotifIds.size,
+        newlyUnsyncedNotifIds.length,
       )
-      const currentUnreadNotifs = state.notifs.filter(
-        (notif) =>
-          shouldKeepNotif(notif) &&
-          (!readNotifIds.has(notif.notifId) || notif.notifType === 'REPORT_PROCESSING') &&
-          !state.pendingReadNotifIds.has(notif.notifId),
-      )
-      const existingIds = new Set(currentUnreadNotifs.map((notif) => notif.notifId))
-      const uniqueNotifs = unreadNotifs.filter((notif) => !existingIds.has(notif.notifId))
 
       return {
-        notifs: [...currentUnreadNotifs, ...uniqueNotifs],
-        unreadCount: getAdjustedUnreadCount(
-          data.unreadCount,
-          state.unreadCount,
-          state.pendingReadNotifIds,
-        ),
-        nextCursorId: nextCursorId ?? state.nextCursorId,
-        hasMore: data.hasNext ?? false,
+        notifs: reconciled.notifs,
+        unreadCount,
+        nextCursorId: data.nextCursorId,
+        hasMore: data.hasNext,
+        suppressedProcessingNotifIds: reconciled.suppressedProcessingNotifIds,
+        unsyncedSuppressedNotifIds: reconciled.unsyncedSuppressedNotifIds,
+        ...(newlyUnsyncedNotifIds.length > 0 && {
+          mutationRevision: state.mutationRevision + 1,
+        }),
       }
     })
+
+    return newlyUnsyncedNotifIds
   },
 
   prependNotif: (notif) => {
+    let newlyUnsyncedNotifIds: number[] = []
+
     set((state) => {
       if (
-        !shouldKeepNotif(notif) ||
         state.pendingReadNotifIds.has(notif.notifId) ||
+        state.suppressedProcessingNotifIds.has(notif.notifId) ||
         state.notifs.some((currentNotif) => currentNotif.notifId === notif.notifId)
       ) {
         return {}
       }
 
+      const reconciled = reconcileReportNotifs(
+        mergeNotifsByCreatedAt([notif], state.notifs),
+        state.suppressedProcessingNotifIds,
+        state.unsyncedSuppressedNotifIds,
+      )
+      newlyUnsyncedNotifIds = reconciled.newlyUnsyncedNotifIds
+
       return {
-        notifs: [notif, ...state.notifs],
-        unreadCount: notif.isRead ? state.unreadCount : state.unreadCount + 1,
+        notifs: reconciled.notifs,
+        unreadCount: Math.max(
+          0,
+          state.unreadCount + (notif.isRead ? 0 : 1) - newlyUnsyncedNotifIds.length,
+        ),
         nextCursorId: state.nextCursorId ?? notif.notifId,
         mutationRevision: state.mutationRevision + 1,
+        suppressedProcessingNotifIds: reconciled.suppressedProcessingNotifIds,
+        unsyncedSuppressedNotifIds: reconciled.unsyncedSuppressedNotifIds,
       }
     })
+
+    return newlyUnsyncedNotifIds
   },
 
   beginNotifRead: (notifId) => {
@@ -174,15 +267,17 @@ export const useNotifStore = create<NotifState>((set, get) => ({
 
       const currentNotif = state.notifs.find((notif) => notif.notifId === notifId)
 
-      if (!currentNotif) return {}
+      if (!currentNotif || currentNotif.isRead) return {}
 
       removedNotif = currentNotif
       const pendingReadNotifIds = new Set(state.pendingReadNotifIds)
       pendingReadNotifIds.add(notifId)
 
       return {
-        notifs: state.notifs.filter((notif) => notif.notifId !== notifId),
-        unreadCount: currentNotif.isRead ? state.unreadCount : Math.max(0, state.unreadCount - 1),
+        notifs: state.notifs.map((notif) =>
+          notif.notifId === notifId ? { ...notif, isRead: true } : notif,
+        ),
+        unreadCount: Math.max(0, state.unreadCount - 1),
         pendingReadNotifIds,
         mutationRevision: state.mutationRevision + 1,
       }
@@ -211,16 +306,10 @@ export const useNotifStore = create<NotifState>((set, get) => ({
 
       const pendingReadNotifIds = new Set(state.pendingReadNotifIds)
       pendingReadNotifIds.delete(notif.notifId)
-      const alreadyExists = state.notifs.some(
-        (currentNotif) => currentNotif.notifId === notif.notifId,
-      )
 
       return {
-        notifs:
-          notif.isRead || alreadyExists
-            ? state.notifs
-            : mergeNotifsByCreatedAt([notif], state.notifs),
-        unreadCount: notif.isRead || alreadyExists ? state.unreadCount : state.unreadCount + 1,
+        notifs: mergeNotifsByCreatedAt([notif], state.notifs),
+        unreadCount: notif.isRead ? state.unreadCount : state.unreadCount + 1,
         pendingReadNotifIds,
         mutationRevision: state.mutationRevision + 1,
       }
@@ -231,7 +320,19 @@ export const useNotifStore = create<NotifState>((set, get) => ({
     set((state) => {
       const currentNotif = state.notifs.find((notif) => notif.notifId === notifId)
 
-      if (!currentNotif || currentNotif.isRead) return {}
+      if (!currentNotif) {
+        if (!state.unsyncedSuppressedNotifIds.has(notifId)) return {}
+
+        const unsyncedSuppressedNotifIds = new Set(state.unsyncedSuppressedNotifIds)
+        unsyncedSuppressedNotifIds.delete(notifId)
+
+        return {
+          unsyncedSuppressedNotifIds,
+          mutationRevision: state.mutationRevision + 1,
+        }
+      }
+
+      if (currentNotif.isRead) return {}
 
       return {
         notifs: state.notifs.map((notif) =>
@@ -243,39 +344,108 @@ export const useNotifStore = create<NotifState>((set, get) => ({
     })
   },
 
-  removeNotifsAsRead: (snapshot) => {
+  confirmSuppressedNotifRead: (notifId) => {
     set((state) => {
-      const snapshotNotifIds = new Set(snapshot.notifIds)
-      const presentSnapshotCount = state.notifs.filter((notif) =>
-        snapshotNotifIds.has(notif.notifId),
-      ).length
-      const remainingNotifs = state.notifs.flatMap((notif) => {
-        if (!snapshotNotifIds.has(notif.notifId)) return [notif]
-        return notif.notifType === 'REPORT_PROCESSING' ? [{ ...notif, isRead: true }] : []
-      })
-      const alreadyRemovedSnapshotCount = Math.max(
-        0,
-        snapshot.notifIds.length - presentSnapshotCount,
-      )
-      const unreadCountToRemove = Math.max(0, snapshot.unreadCount - alreadyRemovedSnapshotCount)
-      const pendingReadNotifIds = new Set(state.pendingReadNotifIds)
+      if (!state.unsyncedSuppressedNotifIds.has(notifId)) return {}
 
-      for (const notifId of snapshotNotifIds) {
-        pendingReadNotifIds.delete(notifId)
-      }
-
-      for (const notifId of snapshot.pendingReadNotifIds) {
-        pendingReadNotifIds.delete(notifId)
-      }
-
-      const hasRemainingNotifs = remainingNotifs.length > 0
+      const unsyncedSuppressedNotifIds = new Set(state.unsyncedSuppressedNotifIds)
+      unsyncedSuppressedNotifIds.delete(notifId)
 
       return {
-        notifs: remainingNotifs,
-        unreadCount: Math.max(0, state.unreadCount - unreadCountToRemove),
-        nextCursorId: hasRemainingNotifs ? state.nextCursorId : null,
-        hasMore: hasRemainingNotifs ? state.hasMore : false,
+        unsyncedSuppressedNotifIds,
+        mutationRevision: state.mutationRevision + 1,
+      }
+    })
+  },
+
+  beginAllNotifsRead: () => {
+    let snapshot: NotifReadAllSnapshot | null = null
+
+    set((state) => {
+      if (state.isMarkingAllAsRead) return {}
+
+      const unreadNotifIds = state.notifs
+        .filter((notif) => !notif.isRead)
+        .map((notif) => notif.notifId)
+      snapshot = {
+        unreadNotifIds,
+        pendingReadNotifIds: Array.from(state.pendingReadNotifIds),
+        unsyncedSuppressedNotifIds: Array.from(state.unsyncedSuppressedNotifIds),
+        unreadCount: state.unreadCount,
+      }
+
+      const pendingReadNotifIds = new Set(state.pendingReadNotifIds)
+      for (const notifId of unreadNotifIds) {
+        pendingReadNotifIds.add(notifId)
+      }
+
+      return {
+        notifs: state.notifs.map((notif) => (notif.isRead ? notif : { ...notif, isRead: true })),
+        unreadCount: 0,
         pendingReadNotifIds,
+        isMarkingAllAsRead: true,
+        mutationRevision: state.mutationRevision + 1,
+      }
+    })
+
+    return snapshot
+  },
+
+  confirmAllNotifsRead: (snapshot) => {
+    set((state) => {
+      if (!state.isMarkingAllAsRead) return {}
+
+      const transactionNotifIds = new Set([
+        ...snapshot.unreadNotifIds,
+        ...snapshot.pendingReadNotifIds,
+      ])
+      const unresolvedTransactionCount = state.notifs.filter(
+        (notif) => transactionNotifIds.has(notif.notifId) && !notif.isRead,
+      ).length
+      const pendingReadNotifIds = new Set(state.pendingReadNotifIds)
+      const unsyncedSuppressedNotifIds = new Set(state.unsyncedSuppressedNotifIds)
+
+      for (const notifId of transactionNotifIds) {
+        pendingReadNotifIds.delete(notifId)
+      }
+
+      for (const notifId of snapshot.unsyncedSuppressedNotifIds) {
+        unsyncedSuppressedNotifIds.delete(notifId)
+      }
+
+      return {
+        notifs: state.notifs.map((notif) =>
+          transactionNotifIds.has(notif.notifId) ? { ...notif, isRead: true } : notif,
+        ),
+        unreadCount: Math.max(0, state.unreadCount - unresolvedTransactionCount),
+        pendingReadNotifIds,
+        unsyncedSuppressedNotifIds,
+        isMarkingAllAsRead: false,
+        mutationRevision: state.mutationRevision + 1,
+      }
+    })
+  },
+
+  rollbackAllNotifsRead: (snapshot) => {
+    set((state) => {
+      if (!state.isMarkingAllAsRead) return {}
+
+      const unreadNotifIds = new Set(snapshot.unreadNotifIds)
+      const pendingReadNotifIds = new Set(state.pendingReadNotifIds)
+
+      // Keep reads that were already pending before the all-read transaction.
+      // Only IDs added by beginAllNotifsRead belong to this rollback.
+      for (const notifId of unreadNotifIds) {
+        pendingReadNotifIds.delete(notifId)
+      }
+
+      return {
+        notifs: state.notifs.map((notif) =>
+          unreadNotifIds.has(notif.notifId) ? { ...notif, isRead: false } : notif,
+        ),
+        unreadCount: state.unreadCount + snapshot.unreadCount,
+        pendingReadNotifIds,
+        isMarkingAllAsRead: false,
         mutationRevision: state.mutationRevision + 1,
       }
     })

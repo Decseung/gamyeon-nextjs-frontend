@@ -1,7 +1,21 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
+import { refreshAuthSession } from '@/featured/auth/actions/auth.action'
+import { useAuthStore } from '@/featured/auth/store'
 import type { Notif } from '../types'
+import { isNotif } from '../utils/validateNotif'
+import { clearNotifClientSession, registerNotifDisconnectHandler } from './notifClientSession'
+import { useNotifActions } from './useNotifActions'
+
+const USE_DIRECT_NOTIF_SSE = Boolean(process.env.NEXT_PUBLIC_NOTIF_SSE_TRANSPORT?.trim())
 
 function getNotifSubscribeEndpoint(): string {
+  if (!USE_DIRECT_NOTIF_SSE) {
+    return '/api/notifs/subscribe'
+  }
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, '')
   if (!apiUrl) {
     throw new Error('NEXT_PUBLIC_API_URL이 설정되지 않았습니다.')
@@ -15,58 +29,34 @@ const RECONNECT_INTERVAL_MS = 3000
 const DISCONNECT_GRACE_MS = 300
 
 class FatalSseError extends Error {}
+
 class RetrySseError extends Error {
   constructor(readonly retryAfterMs: number) {
     super('알림 SSE 인증 갱신 후 재연결합니다.')
   }
 }
 
-export type SseAuthRecoveryResult = 'refreshed' | 'invalid' | 'unavailable'
+type SseAuthRecoveryResult = 'refreshed' | 'invalid' | 'unavailable'
 
-export interface SubscribeNotifsOptions {
+interface NotifSubscription {
   sessionKey: string
   onConnected?: (isReconnect: boolean) => void
   onNotif: (notif: Notif) => void
   onAuthRequired?: () => Promise<SseAuthRecoveryResult>
 }
 
-type NotifSubscriber = SubscribeNotifsOptions
+export type NotifUnauthorizedBehavior = 'redirect-to-signin' | 'stay-on-page'
 
-const subscribers = new Set<NotifSubscriber>()
+interface UseNotifSubscriptionOptions {
+  unauthorizedBehavior?: NotifUnauthorizedBehavior
+}
+
+const subscriptions = new Set<NotifSubscription>()
 
 let activeSessionKey: string | null = null
 let activeController: AbortController | null = null
 let disconnectTimer: ReturnType<typeof setTimeout> | null = null
 let connectionGeneration = 0
-
-function isNotifType(value: unknown): value is Notif['notifType'] {
-  return (
-    value === 'NOTICE' ||
-    value === 'REPORT_PROCESSING' ||
-    value === 'REPORT_SUCCESS' ||
-    value === 'REPORT_FAILED'
-  )
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isNotif(value: unknown): value is Notif {
-  if (!isRecord(value)) return false
-
-  return (
-    typeof value.notifId === 'number' &&
-    Number.isFinite(value.notifId) &&
-    isNotifType(value.notifType) &&
-    typeof value.title === 'string' &&
-    typeof value.content === 'string' &&
-    typeof value.targetId === 'number' &&
-    Number.isFinite(value.targetId) &&
-    typeof value.isRead === 'boolean' &&
-    typeof value.createdAt === 'string'
-  )
-}
 
 function cancelScheduledDisconnect(): void {
   if (disconnectTimer === null) return
@@ -79,15 +69,15 @@ function isCurrentConnection(controller: AbortController, generation: number): b
   return activeController === controller && connectionGeneration === generation
 }
 
-function stopConnection(clearSubscribers: boolean): void {
+function stopConnection(clearSubscriptions: boolean): void {
   cancelScheduledDisconnect()
 
   const controller = activeController
   activeController = null
   activeSessionKey = null
 
-  if (clearSubscribers) {
-    subscribers.clear()
+  if (clearSubscriptions) {
+    subscriptions.clear()
   }
 
   if (controller && !controller.signal.aborted) {
@@ -95,10 +85,10 @@ function stopConnection(clearSubscribers: boolean): void {
   }
 }
 
-function dispatchToSubscribers(callback: (subscriber: NotifSubscriber) => void): void {
-  for (const subscriber of Array.from(subscribers)) {
+function dispatchToSubscriptions(callback: (subscription: NotifSubscription) => void): void {
+  for (const subscription of Array.from(subscriptions)) {
     try {
-      callback(subscriber)
+      callback(subscription)
     } catch (error) {
       console.error('알림 SSE 구독자 콜백을 처리하지 못했습니다.', error)
     }
@@ -114,7 +104,7 @@ async function cancelResponseBody(response: Response): Promise<void> {
 }
 
 function startConnection(): void {
-  if (activeController || !activeSessionKey || subscribers.size === 0) return
+  if (activeController || !activeSessionKey || subscriptions.size === 0) return
 
   const controller = new AbortController()
   const generation = ++connectionGeneration
@@ -143,17 +133,17 @@ function startConnection(): void {
         }
 
         hasAttemptedAuthRecovery = true
-        const authSubscriber = Array.from(subscribers).find(
-          (subscriber) => subscriber.onAuthRequired,
+        const authSubscription = Array.from(subscriptions).find(
+          (subscription) => subscription.onAuthRequired,
         )
 
-        if (!authSubscriber?.onAuthRequired) {
+        if (!authSubscription?.onAuthRequired) {
           throw new FatalSseError('알림 SSE 인증을 갱신할 수 없습니다.')
         }
 
         let recoveryResult: SseAuthRecoveryResult
         try {
-          recoveryResult = await authSubscriber.onAuthRequired()
+          recoveryResult = await authSubscription.onAuthRequired()
         } catch (error) {
           console.error('알림 SSE 인증 갱신 요청을 수행하지 못했습니다.', error)
           throw new FatalSseError('알림 SSE 인증 갱신 요청에 실패했습니다.')
@@ -191,7 +181,7 @@ function startConnection(): void {
           hasConnectedForCurrentRequest = true
           const isReconnect = hasConnectedOnce
           hasConnectedOnce = true
-          dispatchToSubscribers((subscriber) => subscriber.onConnected?.(isReconnect))
+          dispatchToSubscriptions((subscription) => subscription.onConnected?.(isReconnect))
         }
         return
       }
@@ -211,7 +201,7 @@ function startConnection(): void {
         return
       }
 
-      dispatchToSubscribers((subscriber) => subscriber.onNotif(parsed))
+      dispatchToSubscriptions((subscription) => subscription.onNotif(parsed))
     },
     onclose() {
       if (isCurrentConnection(controller, generation) && !controller.signal.aborted) {
@@ -238,12 +228,12 @@ function startConnection(): void {
 }
 
 function scheduleDisconnect(): void {
-  if (subscribers.size > 0 || disconnectTimer !== null) return
+  if (subscriptions.size > 0 || disconnectTimer !== null) return
 
   disconnectTimer = setTimeout(() => {
     disconnectTimer = null
 
-    if (subscribers.size === 0) {
+    if (subscriptions.size === 0) {
       stopConnection(false)
     }
   }, DISCONNECT_GRACE_MS)
@@ -253,19 +243,19 @@ function scheduleDisconnect(): void {
  * 같은 브라우저 탭의 동일 사용자 구독은 하나의 SSE 연결을 공유한다.
  * 마지막 구독 해제는 React Strict Mode의 즉시 재구독을 흡수하도록 잠시 유예한다.
  */
-export function subscribeNotifs(options: SubscribeNotifsOptions): () => void {
+function subscribeToNotifs(subscription: NotifSubscription): () => void {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return () => undefined
   }
 
   cancelScheduledDisconnect()
 
-  if (activeSessionKey && activeSessionKey !== options.sessionKey) {
+  if (activeSessionKey && activeSessionKey !== subscription.sessionKey) {
     stopConnection(true)
   }
 
-  activeSessionKey = options.sessionKey
-  subscribers.add(options)
+  activeSessionKey = subscription.sessionKey
+  subscriptions.add(subscription)
   startConnection()
 
   let isSubscribed = true
@@ -274,12 +264,79 @@ export function subscribeNotifs(options: SubscribeNotifsOptions): () => void {
     if (!isSubscribed) return
 
     isSubscribed = false
-    subscribers.delete(options)
+    subscriptions.delete(subscription)
     scheduleDisconnect()
   }
 }
 
 /** 로그아웃, 인증 만료, 사용자 변경처럼 기존 연결을 재사용하면 안 되는 경우 호출한다. */
-export function disconnectNotifsImmediately(): void {
+function disconnectNotifsImmediately(): void {
   stopConnection(true)
+}
+
+registerNotifDisconnectHandler(disconnectNotifsImmediately)
+
+export function useNotifSubscription({
+  unauthorizedBehavior = 'redirect-to-signin',
+}: UseNotifSubscriptionOptions = {}): void {
+  const userId = useAuthStore((state) => state.user?.id)
+  const logout = useAuthStore((state) => state.logout)
+  const { fetchInitialNotifs, receiveNotif } = useNotifActions()
+  const previousSessionKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const sessionKey = userId === undefined ? null : String(userId)
+
+    if (previousSessionKeyRef.current && previousSessionKeyRef.current !== sessionKey) {
+      clearNotifClientSession()
+    }
+
+    previousSessionKeyRef.current = sessionKey
+
+    if (!sessionKey) return
+
+    let isActive = true
+
+    const requestSync = () => {
+      void fetchInitialNotifs(sessionKey).catch((error: unknown) => {
+        if (isActive) {
+          console.error('알림 목록을 불러오지 못했습니다.', error)
+        }
+      })
+    }
+
+    // 최초 목록 조회와 SSE 재연결 후 누락 보정을 같은 in-flight 요청으로 합친다.
+    requestSync()
+
+    const cleanupSubscription = subscribeToNotifs({
+      sessionKey,
+      onConnected: (isReconnect) => {
+        if (isReconnect) requestSync()
+      },
+      onNotif: (notif) => {
+        if (isActive) {
+          receiveNotif(notif)
+        }
+      },
+      onAuthRequired: async () => {
+        const result = await refreshAuthSession()
+        if (result.status !== 'invalid' || !isActive) return result.status
+
+        isActive = false
+        previousSessionKeyRef.current = null
+        clearNotifClientSession()
+        logout()
+        if (unauthorizedBehavior === 'redirect-to-signin') {
+          window.location.replace('/api/auth/logout?redirectTo=/signin')
+        }
+
+        return result.status
+      },
+    })
+
+    return () => {
+      isActive = false
+      cleanupSubscription()
+    }
+  }, [fetchInitialNotifs, logout, receiveNotif, unauthorizedBehavior, userId])
 }

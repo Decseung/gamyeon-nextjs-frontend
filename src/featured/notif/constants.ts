@@ -7,5 +7,3 @@ export const NOTIF_STYLE_CONFIG = {
   REPORT_SUCCESS: { icon: CheckCircle2, color: 'text-green-500' },
   REPORT_FAILED: { icon: CircleAlert, color: 'text-red-500' },
 } satisfies Record<NotifType, { icon: LucideIcon; color: string }>
-
-export const NOTIF_LIST_SCROLL = 5

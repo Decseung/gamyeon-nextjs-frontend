@@ -12,9 +12,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { useAuthStore } from '@/featured/auth/store'
 import { logoutAction } from '@/featured/auth/actions/auth.action'
-import { invalidateNotifSession } from '@/featured/notif/hooks/useNotifActions'
-import { disconnectNotifsImmediately } from '@/featured/notif/services/notif.sse.service'
-import { useNotifStore } from '@/featured/notif/store'
+import { clearNotifClientSession } from '@/featured/notif/hooks/notifClientSession'
 import { LayoutDashboard, LogOut, Settings } from 'lucide-react'
 
 export function UserProfileButton() {
@@ -23,9 +21,7 @@ export function UserProfileButton() {
   const initials = user?.nickname ? user.nickname.slice(0, 1) : 'U'
 
   const handleLogout = async () => {
-    disconnectNotifsImmediately()
-    invalidateNotifSession()
-    useNotifStore.getState().resetNotifs()
+    clearNotifClientSession()
 
     try {
       await logoutAction()
