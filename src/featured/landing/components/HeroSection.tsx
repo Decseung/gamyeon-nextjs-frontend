@@ -106,13 +106,16 @@ export function HeroSection() {
             </div>
             <div className="grid gap-4 p-6 md:grid-cols-3">
               <div className="md:col-span-2">
-                <div className="flex aspect-video items-center justify-center rounded-xl bg-linear-to-br from-slate-800 to-slate-900">
-                  <div className="text-center">
-                    <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/20 bg-white/10">
-                      <Play className="ml-1 h-6 w-6 text-white/80" />
-                    </div>
-                    <p className="text-sm text-white/60">면접 화면 미리보기</p>
-                  </div>
+                <div className="aspect-video overflow-hidden rounded-xl bg-slate-900">
+                  <iframe
+                    className="h-full w-full"
+                    src="https://www.youtube.com/embed/czAHB1PiZcM"
+                    title="InterviewAI 면접 시뮬레이션 소개 영상"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
                 </div>
               </div>
               <div className="space-y-3">
