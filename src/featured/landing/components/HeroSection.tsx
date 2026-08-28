@@ -101,7 +101,7 @@ export function HeroSection() {
               <div className="h-3 w-3 rounded-full bg-yellow-400/70" />
               <div className="h-3 w-3 rounded-full bg-green-400/70" />
               <span className="text-muted-foreground ml-2 text-xs">
-                InterviewAI - 면접 시뮬레이션
+                가면 | 가상 면접 AI 서비스 미리보기
               </span>
             </div>
             <div className="p-6">
@@ -110,7 +110,7 @@ export function HeroSection() {
                   <iframe
                     className="h-full w-full"
                     src="https://www.youtube.com/embed/czAHB1PiZcM"
-                    title="InterviewAI 면접 시뮬레이션 소개 영상"
+                    title="가면 | 가상 면접 AI 서비스 미리보기 영상"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     referrerPolicy="strict-origin-when-cross-origin"
