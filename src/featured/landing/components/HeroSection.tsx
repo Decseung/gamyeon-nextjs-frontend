@@ -107,15 +107,16 @@ export function HeroSection() {
             <div className="p-6">
               <div className="w-full">
                 <div className="aspect-video overflow-hidden rounded-xl bg-slate-900">
-                  <iframe
-                    className="h-full w-full"
-                    src="https://www.youtube.com/embed/czAHB1PiZcM"
+                  <video
+                    className="h-full w-full object-contain"
                     title="가면 | 가상 면접 AI 서비스 미리보기 영상"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                  />
+                    controls
+                    playsInline
+                    preload="metadata"
+                  >
+                    <source src="/videos/gamyeon-preview2.mp4" type="video/mp4" />
+                    브라우저에서 영상을 재생할 수 없습니다.
+                  </video>
                 </div>
               </div>
             </div>
