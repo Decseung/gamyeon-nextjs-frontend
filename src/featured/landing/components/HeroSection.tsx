@@ -105,7 +105,7 @@ export function HeroSection() {
               </span>
             </div>
             <div className="p-6">
-              <div>
+              <div className="mx-auto w-full md:w-4/5">
                 <div className="aspect-video overflow-hidden rounded-xl bg-slate-900">
                   <iframe
                     className="h-full w-full"
