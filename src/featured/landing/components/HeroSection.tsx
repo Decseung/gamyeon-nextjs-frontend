@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
-import { Mic, Play, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react'
+import { Play, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react'
 
 export function HeroSection() {
   return (
@@ -104,8 +104,8 @@ export function HeroSection() {
                 InterviewAI - 면접 시뮬레이션
               </span>
             </div>
-            <div className="grid gap-4 p-6 md:grid-cols-3">
-              <div className="md:col-span-2">
+            <div className="p-6">
+              <div>
                 <div className="aspect-video overflow-hidden rounded-xl bg-slate-900">
                   <iframe
                     className="h-full w-full"
@@ -116,26 +116,6 @@ export function HeroSection() {
                     referrerPolicy="strict-origin-when-cross-origin"
                     allowFullScreen
                   />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="bg-muted/50 rounded-xl p-4">
-                  <p className="text-muted-foreground mb-2 text-xs font-medium">AI 면접 질문</p>
-                  <p className="text-sm font-medium">
-                    본인의 가장 큰 강점은 무엇이라고 생각하시나요?
-                  </p>
-                </div>
-                <div className="bg-primary/5 rounded-xl p-4">
-                  <p className="text-primary mb-2 text-xs font-medium">남은 시간</p>
-                  <p className="text-primary text-2xl font-bold">01:30</p>
-                </div>
-                <div className="flex gap-2">
-                  <div className="bg-muted/50 flex-1 rounded-lg p-3 text-center">
-                    <Mic className="text-muted-foreground mx-auto h-4 w-4" />
-                  </div>
-                  <div className="bg-primary flex-1 rounded-lg p-3 text-center">
-                    <span className="text-primary-foreground text-xs font-medium">다음</span>
-                  </div>
                 </div>
               </div>
             </div>
