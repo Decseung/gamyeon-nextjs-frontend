@@ -95,7 +95,7 @@ export function HeroSection() {
           transition={{ duration: 0.7, delay: 0.4 }}
           className="mx-auto mt-16 max-w-4xl"
         >
-          <div className="border-border/50 bg-card shadow-primary/5 overflow-hidden rounded-2xl border shadow-2xl">
+          <div className="border-border/50 bg-card shadow-primary/5 mx-auto w-full overflow-hidden rounded-2xl border shadow-2xl md:w-4/5">
             <div className="border-border/50 bg-muted/30 flex items-center gap-2 border-b px-4 py-3">
               <div className="h-3 w-3 rounded-full bg-red-400/70" />
               <div className="h-3 w-3 rounded-full bg-yellow-400/70" />
@@ -105,7 +105,7 @@ export function HeroSection() {
               </span>
             </div>
             <div className="p-6">
-              <div className="mx-auto w-full md:w-4/5">
+              <div className="w-full">
                 <div className="aspect-video overflow-hidden rounded-xl bg-slate-900">
                   <iframe
                     className="h-full w-full"
