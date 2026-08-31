@@ -7,6 +7,7 @@ import { useIntvListQuery } from '@/featured/history/hooks/useIntvListQuery'
 import { HistoryFilterBar } from '@/featured/history/components/HistoryFilterBar'
 import { HistoryContainer } from '@/featured/history/components/HistoryContainer'
 import { HistoryPagination } from '@/featured/history/components/HistoryPagination'
+import { PageContainer } from '@/shared/components/PageContainer'
 
 const ITEMS_PER_PAGE = 10
 
@@ -30,7 +31,7 @@ export function HistoryLayout() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-2 sm:px-6 xl:px-8">
+    <PageContainer className="flex min-h-0 flex-1 flex-col overflow-y-auto py-2">
       <HistoryFilterBar
         search={search}
         onSearchChange={handleSearchChange}
@@ -56,6 +57,6 @@ export function HistoryLayout() {
           />
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }
