@@ -114,7 +114,7 @@ export function HeroSection() {
                     playsInline
                     preload="metadata"
                   >
-                    <source src="/videos/gamyeon-preview2.mp4" type="video/mp4" />
+                    <source src="/videos/gamyeon_landing_preview.mp4" type="video/mp4" />
                     브라우저에서 영상을 재생할 수 없습니다.
                   </video>
                 </div>
