@@ -24,10 +24,10 @@ interface DocumentStepProps {
 export function DocumentStep({
   resume,
   portfolio,
-  // coverLetter,
+  coverLetter,
   setResume,
   setPortfolio,
-  // setCoverLetter,
+  setCoverLetter,
   onComplete,
   isUploading,
 }: DocumentStepProps) {
@@ -55,7 +55,7 @@ export function DocumentStep({
   const docs = [
     { label: '(필수) 이력서', type: 'RESUME', file: resume, setter: setResume },
     { label: '(선택) 포트폴리오', type: 'PORTFOLIO', file: portfolio, setter: setPortfolio },
-    // { label: '(선택) 자기소개서', type: 'COVER_LETTER', file: coverLetter, setter: setCoverLetter },
+    { label: '(선택) 자기소개서', type: 'COVER_LETTER', file: coverLetter, setter: setCoverLetter },
   ]
 
   return (
@@ -66,7 +66,7 @@ export function DocumentStep({
         </div>
         <h3 className="text-lg font-bold">문서 업로드</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          이력서와 포트폴리오를 업로드하면 AI가 맞춤 질문을 준비합니다.
+          이력서, 포트폴리오, 자기소개서를 업로드하면 AI가 맞춤 질문을 준비합니다.
         </p>
       </div>
       <div className="space-y-2">
