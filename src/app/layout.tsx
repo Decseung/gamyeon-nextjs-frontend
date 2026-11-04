@@ -78,7 +78,9 @@ export default function RootLayout({
           />
           <ClarityProvider clarityId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || ''} />
           <ReactQueryProvider>
-            <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+            <TooltipProvider delayDuration={300}>
+              <div className="desktop:max-w-[1920px] mx-auto w-full">{children}</div>
+            </TooltipProvider>
           </ReactQueryProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
