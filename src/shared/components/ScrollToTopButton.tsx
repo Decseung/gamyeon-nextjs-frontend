@@ -40,7 +40,7 @@ export function ScrollToTopButton() {
     <Button
       variant="outline"
       size="icon"
-      className="desktop:right-[calc((100vw-1920px)/2+2rem)] fixed right-8 bottom-8 z-100 h-12 w-12 cursor-pointer rounded-full border-[oklch(0.65_0.15_180)]/30 bg-white text-[oklch(0.65_0.15_180)] shadow-lg transition-all hover:border-[oklch(0.55_0.15_180)] hover:bg-[oklch(0.65_0.15_180)]/10 hover:text-[oklch(0.55_0.15_180)] hover:shadow-xl"
+      className="fixed right-8 bottom-8 z-100 h-12 w-12 cursor-pointer rounded-full border-[oklch(0.65_0.15_180)]/30 bg-white text-[oklch(0.65_0.15_180)] shadow-lg transition-all hover:border-[oklch(0.55_0.15_180)] hover:bg-[oklch(0.65_0.15_180)]/10 hover:text-[oklch(0.55_0.15_180)] hover:shadow-xl"
       onClick={scrollToTop}
       aria-label="맨 위로 가기"
     >

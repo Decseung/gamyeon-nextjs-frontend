@@ -65,9 +65,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} desktop:bg-white font-sans antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -80,9 +78,7 @@ export default function RootLayout({
           />
           <ClarityProvider clarityId={process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || ''} />
           <ReactQueryProvider>
-            <TooltipProvider delayDuration={300}>
-              <div className="bg-background desktop:max-w-[1920px] mx-auto w-full">{children}</div>
-            </TooltipProvider>
+            <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
           </ReactQueryProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
