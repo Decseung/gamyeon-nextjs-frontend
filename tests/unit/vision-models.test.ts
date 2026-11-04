@@ -30,6 +30,7 @@ beforeEach(async () => {
   vi.resetModules()
   vi.resetAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
   landmarker = { close: vi.fn() }
   detector = { close: vi.fn() }
   sdk.resolver.mockResolvedValue({})
@@ -96,6 +97,47 @@ describe('shared vision model lifecycle', () => {
       const models = await retry
       expect(models).toEqual({ landmarker: nextLandmarker, detector: nextDetector })
       expect(await loader.getVisionModels()).toBe(models)
+      expect(sdk.landmarker).toHaveBeenCalledTimes(2)
+      expect(sdk.detector).toHaveBeenCalledTimes(2)
+      expect(nextLandmarker.close).not.toHaveBeenCalled()
+      expect(nextDetector.close).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['landmarker', 'detector'] as const)(
+    'preserves the original %s failure when cleanup throws and allows a shared retry',
+    async (failedKind) => {
+      const successfulModel = failedKind === 'landmarker' ? detector : landmarker
+      const initializationError = new Error('GPU initialization failed')
+      const cleanupError = new Error('model cleanup failed')
+      sdk[failedKind].mockRejectedValueOnce(initializationError)
+      successfulModel.close.mockImplementationOnce(() => {
+        throw cleanupError
+      })
+
+      const first = loader.getVisionModels()
+      expect(loader.getVisionModels()).toBe(first)
+      await expect(first).rejects.toBe(initializationError)
+
+      expect(successfulModel.close).toHaveBeenCalledTimes(1)
+      expect(console.warn).toHaveBeenCalledExactlyOnceWith('모델 정리 중 오류:', cleanupError)
+      expect(console.error).toHaveBeenCalledExactlyOnceWith(
+        '두 모델 초기화 실패:',
+        initializationError,
+      )
+      expect(loader.getCachedVisionModels()).toBeNull()
+
+      const nextLandmarker = { close: vi.fn() }
+      const nextDetector = { close: vi.fn() }
+      sdk.landmarker.mockResolvedValue(nextLandmarker)
+      sdk.detector.mockResolvedValue(nextDetector)
+      const retry = loader.getVisionModels()
+      expect(loader.getVisionModels()).toBe(retry)
+      const models = await retry
+      expect(models).toEqual({ landmarker: nextLandmarker, detector: nextDetector })
+      expect(loader.getCachedVisionModels()).toBe(models)
+      expect(await loader.getVisionModels()).toBe(models)
+      expect(sdk.resolver).toHaveBeenCalledTimes(2)
       expect(sdk.landmarker).toHaveBeenCalledTimes(2)
       expect(sdk.detector).toHaveBeenCalledTimes(2)
       expect(nextLandmarker.close).not.toHaveBeenCalled()

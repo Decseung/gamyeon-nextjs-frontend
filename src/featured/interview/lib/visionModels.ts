@@ -13,6 +13,14 @@ export function getCachedVisionModels(): VisionModels | null {
   return cachedModels
 }
 
+function closeModelSafely(model: { close(): void }): void {
+  try {
+    model.close()
+  } catch (cleanupError) {
+    console.warn('모델 정리 중 오류:', cleanupError)
+  }
+}
+
 async function createVisionModels(): Promise<VisionModels> {
   const filesetResolver = await FilesetResolver.forVisionTasks(
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm',
@@ -40,12 +48,12 @@ async function createVisionModels(): Promise<VisionModels> {
   ])
 
   if (landmarker.status === 'rejected') {
-    if (detector.status === 'fulfilled') detector.value.close()
+    if (detector.status === 'fulfilled') closeModelSafely(detector.value)
     throw landmarker.reason
   }
 
   if (detector.status === 'rejected') {
-    landmarker.value.close()
+    closeModelSafely(landmarker.value)
     throw detector.reason
   }
 
