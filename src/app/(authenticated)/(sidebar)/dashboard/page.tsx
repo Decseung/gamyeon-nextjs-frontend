@@ -4,6 +4,7 @@ import { QuickStartSection } from '@/featured/dashboard/components/QuickStartSec
 import { DashboardLiveSection } from '@/featured/dashboard/components/DashboardLiveSection'
 import { getIntvListAction } from '@/featured/history/actions/history.action'
 import { getNoticesAction } from '@/featured/notice/actions/notice.action'
+import { PageContainer } from '@/shared/components/PageContainer'
 
 export default async function DashboardPage() {
   const [historyResponse, noticeResponse] = await Promise.all([
@@ -17,10 +18,10 @@ export default async function DashboardPage() {
   return (
     <>
       <DashboardHeader />
-      <div className="space-y-6 px-8 py-4">
+      <PageContainer className="space-y-6 py-4">
         <QuickStartSection records={initialRecords} />
         <DashboardLiveSection initialRecords={initialRecords} initialNotices={initialNotices} />
-      </div>
+      </PageContainer>
     </>
   )
 }

@@ -114,8 +114,8 @@ export function StatusSection({ records = [] }: StatusSectionProps) {
                 <div className="text-muted-foreground grid w-full grid-cols-8 gap-1 text-center text-[9px] font-medium sm:gap-1.5 sm:text-[10px]">
                   {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                     <div key={num}>
-                      <span className="2xl:hidden">W{num}</span>
-                      <span className="hidden 2xl:inline">Week{num}</span>
+                      <span className="wide:hidden">W{num}</span>
+                      <span className="hidden wide:inline">Week{num}</span>
                     </div>
                   ))}
                 </div>

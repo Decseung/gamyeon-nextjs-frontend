@@ -4,6 +4,7 @@ import { VideoArea } from '@/featured/interview/components/screen/VideoArea'
 import { TimerWidget } from '@/featured/interview/components/screen/TimerWidget'
 import { FinishedOverlay } from '@/featured/interview/components/screen/FinishedOverlay'
 import { ControlBar } from '@/featured/interview/components/screen/ControlBar'
+import { useInterviewViewport } from '@/featured/interview/hooks/useInterviewViewport'
 import type { useInterview } from '@/featured/interview/hooks/useInterview'
 
 interface InterviewPageProps {
@@ -11,6 +12,7 @@ interface InterviewPageProps {
 }
 
 export function InterviewContainer({ session }: InterviewPageProps) {
+  const isSupportedViewport = useInterviewViewport()
   const currentQuestionSetId =
     session.interviewQuestions[session.currentQuestion]?.questionSetId ?? null
 
@@ -61,6 +63,14 @@ export function InterviewContainer({ session }: InterviewPageProps) {
         onEndClick={handleStopRequest}
         onBackClick={handleStopRequest}
       />
+      {!session.showSetup && session.phase !== 'finished' && isSupportedViewport === false && (
+        <p
+          role="status"
+          className="shrink-0 border-b border-amber-400/20 bg-amber-400/10 px-4 py-2 text-center text-sm text-amber-200"
+        >
+          원활한 면접을 위해 창을 넓혀 주세요.
+        </p>
+      )}
       <QuestionBanner
         currentQuestion={session.currentQuestion}
         questions={session.interviewQuestions}
