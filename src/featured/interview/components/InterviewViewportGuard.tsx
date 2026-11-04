@@ -2,42 +2,28 @@
 
 import Link from 'next/link'
 import { ArrowLeft, Monitor } from 'lucide-react'
-import { type ReactNode, useSyncExternalStore } from 'react'
+import { type ReactNode, useState } from 'react'
+import { useInterviewViewport } from '@/featured/interview/hooks/useInterviewViewport'
 import { Button } from '@/shared/ui/button'
-
-const INTERVIEW_VIEWPORT_QUERY = '(min-width: 1024px)'
-
-function subscribeToViewportChange(onStoreChange: () => void) {
-  const mediaQuery = window.matchMedia(INTERVIEW_VIEWPORT_QUERY)
-  mediaQuery.addEventListener('change', onStoreChange)
-
-  return () => mediaQuery.removeEventListener('change', onStoreChange)
-}
-
-function getViewportSnapshot() {
-  return window.matchMedia(INTERVIEW_VIEWPORT_QUERY).matches
-}
-
-function getServerViewportSnapshot() {
-  return null
-}
 
 interface InterviewViewportGuardProps {
   children: ReactNode
 }
 
 export function InterviewViewportGuard({ children }: InterviewViewportGuardProps) {
-  const isSupportedViewport = useSyncExternalStore(
-    subscribeToViewportChange,
-    getViewportSnapshot,
-    getServerViewportSnapshot,
-  )
+  const isSupportedViewport = useInterviewViewport()
+  const [hasEntered, setHasEntered] = useState(false)
 
-  if (isSupportedViewport === null) {
+  // 한 번 진입한 면접은 창 크기가 바뀌어도 설정·녹화 상태를 유지한다.
+  if (!hasEntered && isSupportedViewport === true) {
+    setHasEntered(true)
+  }
+
+  if (!hasEntered && isSupportedViewport === null) {
     return <div className="min-h-dvh bg-slate-950" aria-hidden="true" />
   }
 
-  if (!isSupportedViewport) {
+  if (!hasEntered && !isSupportedViewport) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-slate-950 px-6 py-10 text-white">
         <section

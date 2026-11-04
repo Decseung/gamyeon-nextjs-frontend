@@ -8,6 +8,7 @@ import { useCameraHandler } from './useCameraHandler'
 import { useMicPermission } from './useMicPermission'
 import { useMicRecorder } from './useMicRecorder'
 import { useQuestionPolling } from './useQuestionPolling'
+import { isInterviewViewportSupported } from './useInterviewViewport'
 import {
   restartInterviewAction,
   startInterviewAction,
@@ -105,6 +106,11 @@ export function useSetupModal({ session, isRestart }: UseSetupModalParams) {
   }, [completeStep])
 
   const handleStart = useCallback(async () => {
+    if (!isInterviewViewportSupported()) {
+      toast.error('면접을 시작하려면 브라우저 창을 가로 1024px 이상으로 넓혀 주세요.')
+      return
+    }
+
     if (!cameraHandler.cameraStream) {
       console.error('카메라 스트림이 아직 준비되지 않았습니다.')
       return
